@@ -1,7 +1,7 @@
 // Mini ESP32 tracked rover - parametric model.
 //
 // Pick what to render with `part`:
-//   assembly | chassis | deck | sprocket | idler | pin | track | plate
+//   assembly | chassis | deck | sprocket | idler | pin | track | plate | hubtest
 // e.g.  openscad -D 'part="chassis"' -o chassis.stl rover.scad
 //
 // Axes in the assembly: +x forward, +y left, +z up, ground at z = 0.
@@ -19,9 +19,20 @@ motor_len = 15;
 // Gearbox: diameter and length (motor face to gearbox face)
 gbox_d = 10;
 gbox_len = 9;
-// Output shaft: diameter, distance across the D flat, length
+// Output: "gear" = small pinion on the gearbox (star socket in the hub),
+//         "d"    = plain D shaft
+shaft_type = "gear";
+// Pinion: tooth count, tip diameter, root diameter (between teeth), length.
+// gear_teeth = 0 gives a plain round bore of gear_od - 0.3 to force the
+// pinion into, if your printer cannot resolve the star.
+gear_teeth = 8;
+gear_od = 4.0;
+gear_root_d = 2.6;
+gear_fit = 0.1;       // clearance added all round the pinion profile
+// D shaft: diameter, distance across the flat
 shaft_d = 3.0;
 shaft_flat = 2.5;
+// Length of the pinion / shaft beyond the gearbox face
 shaft_len = 4;
 // Battery (602030), XIAO and DRV8833 board footprints
 batt = [30, 20, 6];
@@ -191,14 +202,31 @@ module wheel_body() {
   }
 }
 
-module sprocket() {
-  difference() {
-    wheel_body();
-    // D bore for the shaft
-    translate([0, 0, -eps]) linear_extrude(wheel_w) intersection() {
+// 2D hole that the motor output pushes into. `clr` is added all round.
+module shaft_bore2d(clr = gear_fit) {
+  if (shaft_type == "d") {
+    intersection() {
       circle(d = shaft_d + 0.15);
       translate([-shaft_d, -shaft_d / 2 - 0.075]) square([2 * shaft_d, shaft_flat + 0.15]);
     }
+  } else if (gear_teeth == 0) {
+    circle(d = gear_od - 0.3);
+  } else {
+    // star socket: root circle plus one tapered slot per pinion tooth
+    rr = gear_root_d / 2 + clr;
+    rt = gear_od / 2 + clr;
+    w_root = PI * gear_root_d / gear_teeth * 0.62 + 2 * clr;  // slot width at the root circle
+    w_tip = max(0.25, w_root * 0.35);
+    circle(r = rr);
+    for (i = [0 : gear_teeth - 1]) rotate(i * 360 / gear_teeth)
+      polygon([[rr * 0.7, -w_root / 2], [rt, -w_tip / 2], [rt, w_tip / 2], [rr * 0.7, w_root / 2]]);
+  }
+}
+
+module sprocket() {
+  difference() {
+    wheel_body();
+    translate([0, 0, -eps]) linear_extrude(wheel_w) shaft_bore2d();
     // the gearbox nests inside the wheel
     translate([0, 0, wheel_w - recess_depth]) cylinder(d = gbox_d + 0.8, h = recess_depth + eps);
   }
@@ -208,6 +236,17 @@ module idler() {
   difference() {
     wheel_body();
     translate([0, 0, -eps]) cylinder(d = pin_d + 0.5, h = wheel_w + 2 * eps);
+  }
+}
+
+// Three small pucks, same thickness as the sprocket hub, with the shaft bore
+// at clearance gear_fit - 0.1 / gear_fit / gear_fit + 0.1 (1, 2, 3 notches).
+// Print this first and see which one the motor output presses into snugly.
+module hubtest() {
+  for (i = [0 : 2]) translate([i * 11, 0, 0]) difference() {
+    hull() { cylinder(d = 10, h = wheel_w - recess_depth); if (i < 2) translate([11, 0, 0]) cylinder(d = 4, h = 1); }
+    translate([0, 0, -eps]) linear_extrude(wheel_w) shaft_bore2d(gear_fit + (i - 1) * 0.1);
+    for (n = [0 : i]) translate([-1.6 + n * 1.6 - 0.4, 4, -eps]) cube([0.8, 2, wheel_w]);
   }
 }
 
@@ -254,7 +293,7 @@ module track() {
 module motor_mock() {  // shaft along +y, origin at the motor/gearbox joint on the axis
   color("silver") translate([-motor_w / 2, -motor_len, -motor_h / 2]) cube([motor_w, motor_len, motor_h]);
   color("white") rotate([-90, 0, 0]) cylinder(d = gbox_d, h = gbox_len);
-  color("white") rotate([-90, 0, 0]) cylinder(d = shaft_d, h = gbox_len + shaft_len);
+  color("white") rotate([-90, 0, 0]) cylinder(d = shaft_type == "d" ? shaft_d : gear_od, h = gbox_len + shaft_len);
 }
 
 module side_parts(side) {  // side +1 = left
@@ -299,6 +338,7 @@ else if (part == "idler") idler();
 else if (part == "pin") pin();
 else if (part == "track") track();
 else if (part == "plate") plate();
+else if (part == "hubtest") hubtest();
 
 echo(str("wheelbase=", wheelbase, " axle_z=", axle_z, " size LxWxH=", 2 * (ax + track_r), " x ",
          2 * (by + wheel_gap + wheel_w), " x ", max(2 * track_r, wall_top + deck_t + 4)));

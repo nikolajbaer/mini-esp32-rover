@@ -39,20 +39,29 @@ Ready-made STLs are in [`cad/stl/`](cad/stl), each already oriented for printing
 | `idler.stl` | 2 | PETG | |
 | `pin.stl` | 2 | PETG | head down |
 | `track.stl` | 2 | TPU | standing on edge as oriented; 0.4 mm nozzle, 2 walls |
+| `hubtest.stl` | 1 | PETG | fit test for the motor output, print this first |
 
 **Measure your parts before printing.** With calipers, check the values in the
 "Measure these on your parts" block at the top of `rover.scad` (motor can,
-gearbox diameter and length, shaft diameter / D-flat / length, board sizes),
-edit them, and re-export:
+gearbox diameter and length, output pinion, board sizes), edit them, and
+re-export:
 
 ```sh
 cd cad
-for p in chassis deck sprocket idler pin track; do
+for p in chassis deck sprocket idler pin track hubtest; do
   openscad -D "part=\"$p\"" -o stl/$p.stl rover.scad
 done
 ```
 
-Good first test prints are one `sprocket` (shaft and gearbox fit) and one
+The motors end in a small pinion gear, so the sprocket hub has a matching
+star socket. Count the pinion's teeth and measure its tip and root diameters
+(`gear_teeth`, `gear_od`, `gear_root_d`). Then print `hubtest`: three pucks with
+the socket at 0.1 mm tighter, nominal, and 0.1 mm looser (1, 2, 3 notches).
+Set `gear_fit` to match the one the pinion presses into snugly. If your printer
+cannot resolve the star, `gear_teeth = 0` gives a plain undersized round bore
+to force the pinion into. For a plain D shaft set `shaft_type = "d"`.
+
+After that, good test prints are one `sprocket` (gearbox recess) and one
 `track` (tension). If the track is loose or tight, change `pretension`; if it
 skips, raise `tooth_h`.
 
