@@ -1,0 +1,304 @@
+// Mini ESP32 tracked rover - parametric model.
+//
+// Pick what to render with `part`:
+//   assembly | chassis | deck | sprocket | idler | pin | track | plate
+// e.g.  openscad -D 'part="chassis"' -o chassis.stl rover.scad
+//
+// Axes in the assembly: +x forward, +y left, +z up, ground at z = 0.
+// The two motors sit crosswise and staggered: the left track is driven at the
+// front, the right track at the rear. That keeps the body barely wider than
+// one motor is long.
+
+part = "assembly";
+
+/* [Measure these on your parts] */
+// DC motor can: width, height (across the flats), length
+motor_w = 12;
+motor_h = 10;
+motor_len = 15;
+// Gearbox: diameter and length (motor face to gearbox face)
+gbox_d = 10;
+gbox_len = 9;
+// Output shaft: diameter, distance across the D flat, length
+shaft_d = 3.0;
+shaft_flat = 2.5;
+shaft_len = 4;
+// Battery (602030), XIAO and DRV8833 board footprints
+batt = [30, 20, 6];
+xiao = [21, 17.8];
+drv = [18, 18];
+
+/* [Tracks] */
+pitch = 5;            // tooth pitch along the belt
+sprocket_teeth = 12;
+belt_teeth = 34;      // sets the wheelbase: (belt_teeth - sprocket_teeth) * pitch / 2
+belt_w = 8;
+band_t = 1.0;         // thickness of the flexible band
+tooth_h = 1.2;        // inner drive teeth
+tread_h = 0.8;        // outer grip bars
+pretension = 0.5;     // belt is modelled this much short per run so it sits snug
+
+/* [Body] */
+inner_w = 28;         // inside width of the tub
+wall = 2;
+end_wall = 1.6;
+floor_t = 1.6;
+ground_clearance = 3;
+deck_t = 1.6;
+screw_pilot_d = 1.7;  // M2 self-tapping into plastic
+screw_clear_d = 2.3;
+pin_d = 4.0;          // idler axle pin
+pin_hole_d = 4.1;     // hole in the chassis wall (light press fit)
+fit = 0.2;            // general sliding clearance
+
+/* [Hidden] */
+$fn = 64;
+eps = 0.01;
+
+pitch_r = sprocket_teeth * pitch / (2 * PI);
+wheelbase = (belt_teeth - sprocket_teeth) * pitch / 2;
+sprocket_r = pitch_r - band_t / 2;             // belt inner surface rides here
+track_r = pitch_r + band_t / 2 + tread_h;
+axle_z = track_r;
+ax = wheelbase / 2;                            // axle x position (+/-)
+
+floor_top = ground_clearance + floor_t;
+motor_bot = axle_z - motor_h / 2;
+wall_top = axle_z + motor_h / 2;               // deck clamps the motors here
+bx = ax + motor_w / 2 + fit + end_wall;        // body half length
+by = inner_w / 2 + wall;                       // body half width
+rib_t = 1.2;
+rib_x = ax - motor_w / 2 - fit - rib_t;        // inner face of the motor pocket rib
+post_x = batt.x / 2 + 3.25;
+post_y = inner_w / 2 - 1.9;
+
+flange = 1.2;                                  // 45 degree belt guide flanges
+wheel_gap = 0.6;                               // wall to wheel
+wheel_w = belt_w + 0.4 + 2 * flange;
+recess_depth = gbox_len - wall - wheel_gap + 0.5;
+boss_len = 3;                                  // idler pin boss inside the wall
+pin_len = wall + boss_len + wheel_gap + wheel_w + 0.3;
+
+assert(motor_bot >= floor_top, "motor sits below the floor: more teeth or less clearance");
+assert(batt.x / 2 < rib_x - 4, "battery bay too short: raise belt_teeth");
+assert(wheel_w - recess_depth >= 2.5, "sprocket hub too thin for the shaft");
+
+// ---------------------------------------------------------------- chassis --
+// side: +1 = motor shaft exits the left wall (+y), -1 = right wall.
+module motor_pocket_add(side) {
+  // pads under the can
+  for (dy = [2, motor_len - 5])
+    translate([-motor_w / 2 - fit, side > 0 ? inner_w / 2 - dy - 3 : -inner_w / 2 + dy, floor_top - eps])
+      cube([motor_w + 2 * fit, 3, motor_bot - floor_top + eps]);
+  // stop behind the can (kept low so it clears the terminals)
+  stop_y = inner_w / 2 - motor_len - fit;
+  translate([-motor_w / 2 - fit, side > 0 ? stop_y - 1.5 : -stop_y, floor_top - eps])
+    cube([motor_w + 2 * fit, 1.5, motor_bot - floor_top + 3]);
+  // boss for the idler pin on the opposite wall, carried down to the floor so it prints
+  translate([0, -side * inner_w / 2, 0]) hull() {
+    translate([0, 0, axle_z]) rotate([90, 0, 0])
+      translate([0, 0, side > 0 ? -boss_len : 0]) cylinder(d = pin_d + 4, h = boss_len);
+    translate([-(pin_d + 4) / 2, side > 0 ? 0 : -boss_len, floor_top - eps])
+      cube([pin_d + 4, boss_len, eps]);
+  }
+}
+
+module motor_pocket_cut(side) {
+  // U slot for the gearbox
+  translate([0, side * (inner_w / 2 - eps), 0]) rotate([0, 0, side > 0 ? 0 : 180]) {
+    translate([0, 0, axle_z]) rotate([-90, 0, 0]) cylinder(d = gbox_d + 2 * fit, h = wall + 2 * eps);
+    translate([-gbox_d / 2 - fit, 0, axle_z]) cube([gbox_d + 2 * fit, wall + 2 * eps, wall_top]);
+  }
+  // idler pin hole, opposite wall
+  translate([0, -side * (inner_w / 2 - boss_len - eps), axle_z]) rotate([side > 0 ? 90 : -90, 0, 0])
+    cylinder(d = pin_hole_d, h = wall + boss_len + 2 * eps);
+}
+
+module chassis() {
+  difference() {
+    union() {
+      difference() {
+        translate([-bx, -by, ground_clearance]) cube([2 * bx, 2 * by, wall_top - ground_clearance]);
+        translate([-bx + end_wall, -inner_w / 2, floor_top]) cube([2 * (bx - end_wall), inner_w, wall_top]);
+      }
+      // ribs closing the motor pockets (wires pass over the top)
+      for (s = [-1, 1]) translate([s > 0 ? rib_x : -rib_x - rib_t, -inner_w / 2 - eps, floor_top - eps])
+        cube([rib_t, inner_w + 2 * eps, axle_z - floor_top]);
+      // screw posts for the deck
+      for (sx = [-1, 1], sy = [-1, 1]) translate([sx * post_x - 2.5, sy > 0 ? inner_w / 2 - 3.8 : -inner_w / 2 - eps, floor_top - eps])
+        cube([5, 3.8 + eps, wall_top - floor_top + eps]);
+      translate([ax, 0, 0]) motor_pocket_add(1);
+      translate([-ax, 0, 0]) motor_pocket_add(-1);
+    }
+    translate([ax, 0, 0]) motor_pocket_cut(1);
+    translate([-ax, 0, 0]) motor_pocket_cut(-1);
+    for (sx = [-1, 1], sy = [-1, 1]) translate([sx * post_x, sy * post_y, wall_top - 8])
+      cylinder(d = screw_pilot_d, h = 8 + eps);
+  }
+}
+
+// ------------------------------------------------------------------- deck --
+// Clamps the motors and carries the electronics. XIAO at the rear with its
+// USB-C port pointing backwards, DRV8833 at the front.
+xiao_x = -bx;                       // rear edge of the XIAO pocket
+drv_x = bx - 1.2 - drv.x - fit;     // rear edge of the DRV pocket
+
+module corner_tabs(size, h = 2.5, t = 1.2, len = 4) {
+  for (cx = [0, 1], cy = [0, 1])
+    translate([cx * size.x, cy * size.y, 0]) mirror([cx, 0, 0]) mirror([0, cy, 0]) {
+      translate([-t, -t, 0]) cube([len, t, h]);
+      translate([-t, -t, 0]) cube([t, len, h]);
+    }
+}
+
+module deck() {
+  slot_x0 = xiao_x + xiao.x - 4;
+  slot_x1 = drv_x + 3;
+  difference() {
+    union() {
+      translate([-bx, -by, 0]) cube([2 * bx, 2 * by, deck_t]);
+      // XIAO: side tabs only, so the USB end stays open
+      translate([xiao_x + 3, -xiao.y / 2 - fit, deck_t - eps])
+        corner_tabs([xiao.x - 3 + fit, xiao.y + 2 * fit]);
+      translate([drv_x, -drv.y / 2 - fit, deck_t - eps])
+        corner_tabs([drv.x + 2 * fit, drv.y + 2 * fit]);
+    }
+    // the rear tabs of the XIAO pocket would block the USB plug: trim flush
+    translate([-bx - 5, -by, deck_t]) cube([5, 2 * by, 10]);
+    // wire slot between (and a little under) the boards
+    hull() for (x = [slot_x0 + 4, slot_x1 - 4]) translate([x, 0, -eps]) cylinder(d = 8, h = deck_t + 2 * eps);
+    for (sx = [-1, 1], sy = [-1, 1]) translate([sx * post_x, sy * post_y, -eps])
+      cylinder(d = screw_clear_d, h = deck_t + 2 * eps);
+  }
+}
+
+// ----------------------------------------------------------------- wheels --
+module groove2d() {
+  d = tooth_h + 0.3;
+  polygon([[sprocket_r + 0.5, -1.5], [sprocket_r - d, -0.9], [sprocket_r - d, 0.9], [sprocket_r + 0.5, 1.5]]);
+}
+
+// Printed as modelled: outer face on the bed, flanges are self-supporting cones.
+module wheel_body() {
+  difference() {
+    union() {
+      cylinder(r1 = sprocket_r + flange, r2 = sprocket_r, h = flange);
+      cylinder(r = sprocket_r, h = wheel_w);
+      translate([0, 0, wheel_w - flange]) cylinder(r1 = sprocket_r, r2 = sprocket_r + flange, h = flange);
+    }
+    translate([0, 0, flange]) linear_extrude(wheel_w - 2 * flange)
+      for (i = [0 : sprocket_teeth - 1]) rotate(i * 360 / sprocket_teeth) groove2d();
+  }
+}
+
+module sprocket() {
+  difference() {
+    wheel_body();
+    // D bore for the shaft
+    translate([0, 0, -eps]) linear_extrude(wheel_w) intersection() {
+      circle(d = shaft_d + 0.15);
+      translate([-shaft_d, -shaft_d / 2 - 0.075]) square([2 * shaft_d, shaft_flat + 0.15]);
+    }
+    // the gearbox nests inside the wheel
+    translate([0, 0, wheel_w - recess_depth]) cylinder(d = gbox_d + 0.8, h = recess_depth + eps);
+  }
+}
+
+module idler() {
+  difference() {
+    wheel_body();
+    translate([0, 0, -eps]) cylinder(d = pin_d + 0.5, h = wheel_w + 2 * eps);
+  }
+}
+
+// Printed head down.
+module pin() {
+  cylinder(d = pin_d + 3, h = 1.2);
+  cylinder(d = pin_d, h = 1.2 + pin_len);
+}
+
+// ------------------------------------------------------------------ track --
+// Pose on the belt pitch line at arc length s: [x, y, tangent angle].
+// Runs clockwise seen from the left: forward along the top, down the front.
+function belt_pose(s, run) =
+  let (h = run / 2, R = pitch_r, arc = PI * R)
+  s < run ? [-h + s, R, 0] :
+  s < run + arc ? let (a = (s - run) / R * 180 / PI) [h + R * sin(a), R * cos(a), -a] :
+  s < 2 * run + arc ? [h - (s - run - arc), -R, 180] :
+  let (a = (s - 2 * run - arc) / R * 180 / PI) [-h - R * sin(a), -R * cos(a), 180 - a];
+
+// Printed standing on its edge, as modelled (TPU).
+module track() {
+  run = wheelbase - pretension;
+  len = 2 * run + 2 * PI * pitch_r;
+  step = len / belt_teeth;
+  linear_extrude(belt_w) {
+    difference() {
+      hull() for (x = [-run / 2, run / 2]) translate([x, 0]) circle(r = pitch_r + band_t / 2, $fn = 96);
+      hull() for (x = [-run / 2, run / 2]) translate([x, 0]) circle(r = pitch_r - band_t / 2, $fn = 96);
+    }
+    for (i = [0 : belt_teeth - 1]) {
+      // drive tooth, inside (phased so teeth sit at the wheel's 12 o'clock groove)
+      p = belt_pose((i * step + run / 2) % len, run);
+      translate([p.x, p.y]) rotate(p[2])
+        polygon([[-1.1, -band_t / 2 + eps], [-0.7, -band_t / 2 - tooth_h], [0.7, -band_t / 2 - tooth_h], [1.1, -band_t / 2 + eps]]);
+      // tread bar, outside, between the teeth
+      q = belt_pose(((i + 0.5) * step + run / 2) % len, run);
+      translate([q.x, q.y]) rotate(q[2])
+        polygon([[-1.2, band_t / 2 - eps], [-0.8, band_t / 2 + tread_h], [0.8, band_t / 2 + tread_h], [1.2, band_t / 2 - eps]]);
+    }
+  }
+}
+
+// --------------------------------------------------------------- assembly --
+module motor_mock() {  // shaft along +y, origin at the motor/gearbox joint on the axis
+  color("silver") translate([-motor_w / 2, -motor_len, -motor_h / 2]) cube([motor_w, motor_len, motor_h]);
+  color("white") rotate([-90, 0, 0]) cylinder(d = gbox_d, h = gbox_len);
+  color("white") rotate([-90, 0, 0]) cylinder(d = shaft_d, h = gbox_len + shaft_len);
+}
+
+module side_parts(side) {  // side +1 = left
+  wy = by + wheel_gap;
+  drive_x = side * ax;
+  // wheels are modelled outer face down; flip so the outer face points outward
+  translate([drive_x, side * (wy + wheel_w), axle_z]) rotate([side * 90, 0, 0]) color("orange") rotate(90) sprocket();
+  translate([-drive_x, side * (wy + wheel_w), axle_z]) rotate([side * 90, 0, 0]) color("gold") rotate(90) idler();
+  translate([-drive_x, side * (wy + wheel_w + 0.3 + 1.2), axle_z]) rotate([side * 90, 0, 0]) color("gold") pin();
+  translate([0, side * (wy + flange + 0.2 + (side > 0 ? belt_w : 0)), axle_z]) rotate([90, 0, 0]) color("dimgray") track();
+  translate([drive_x, side * inner_w / 2, axle_z]) rotate([0, 0, side > 0 ? 0 : 180]) motor_mock();
+}
+
+module assembly() {
+  color("steelblue") chassis();
+  color("lightsteelblue", 0.9) translate([0, 0, wall_top]) deck();
+  side_parts(1);
+  side_parts(-1);
+  color("gold") translate([-batt.x / 2, -batt.y / 2, floor_top]) cube(batt);
+  color("darkgreen") translate([xiao_x, -xiao.y / 2, wall_top + deck_t]) cube([xiao.x, xiao.y, 1.2]);
+  color("silver") translate([xiao_x + 7, -6, wall_top + deck_t + 1.2]) cube([12.5, 12, 2.4]);
+  color("silver") translate([xiao_x - 1.5, -4.5, wall_top + deck_t + 1.2]) cube([7.5, 9, 3.2]);
+  color("purple") translate([drv_x + fit, -drv.y / 2, wall_top + deck_t]) cube([drv.x, drv.y, 1.6]);
+}
+
+// Everything rigid on one plate (PETG). Print the tracks separately in TPU.
+module plate() {
+  translate([0, 0, -ground_clearance]) chassis();
+  translate([0, 2 * by + 6, 0]) deck();
+  for (i = [0, 1]) {
+    translate([-bx - 14, i * 24, 0]) sprocket();
+    translate([-bx - 38, i * 24, 0]) idler();
+    translate([-bx - 14 - i * 12, 46, 0]) pin();
+  }
+}
+
+if (part == "assembly") assembly();
+else if (part == "chassis") translate([0, 0, -ground_clearance]) chassis();
+else if (part == "deck") deck();
+else if (part == "sprocket") sprocket();
+else if (part == "idler") idler();
+else if (part == "pin") pin();
+else if (part == "track") track();
+else if (part == "plate") plate();
+
+echo(str("wheelbase=", wheelbase, " axle_z=", axle_z, " size LxWxH=", 2 * (ax + track_r), " x ",
+         2 * (by + wheel_gap + wheel_w), " x ", max(2 * track_r, wall_top + deck_t + 4)));
