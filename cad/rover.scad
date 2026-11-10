@@ -22,12 +22,13 @@ gbox_len = 9;
 // Output: "gear" = small pinion on the gearbox (star socket in the hub),
 //         "d"    = plain D shaft
 shaft_type = "gear";
-// Pinion: tooth count, tip diameter, root diameter (between teeth), length.
+// Pinion: tooth count, tip diameter, width of the valley between two teeth.
 // gear_teeth = 0 gives a plain round bore of gear_od - 0.3 to force the
-// pinion into, if your printer cannot resolve the star.
-gear_teeth = 8;
-gear_od = 4.0;
-gear_root_d = 2.6;
+// pinion into, if your printer cannot resolve the keys.
+gear_teeth = 6;
+gear_od = 4.46;
+gear_valley_w = 0.75;
+gear_key_depth = 0.7; // how far the hub's keys reach down between the teeth
 gear_fit = 0.1;       // clearance added all round the pinion profile
 // D shaft: diameter, distance across the flat
 shaft_d = 3.0;
@@ -212,14 +213,18 @@ module shaft_bore2d(clr = gear_fit) {
   } else if (gear_teeth == 0) {
     circle(d = gear_od - 0.3);
   } else {
-    // star socket: root circle plus one tapered slot per pinion tooth
-    rr = gear_root_d / 2 + clr;
+    // round bore at the tooth tips, with one key per valley reaching part way
+    // down between the teeth. Keys are sized from the valley width, so the
+    // root diameter does not need to be known.
     rt = gear_od / 2 + clr;
-    w_root = PI * gear_root_d / gear_teeth * 0.62 + 2 * clr;  // slot width at the root circle
-    w_tip = max(0.25, w_root * 0.35);
-    circle(r = rr);
-    for (i = [0 : gear_teeth - 1]) rotate(i * 360 / gear_teeth)
-      polygon([[rr * 0.7, -w_root / 2], [rt, -w_tip / 2], [rt, w_tip / 2], [rr * 0.7, w_root / 2]]);
+    ri = gear_od / 2 - gear_key_depth;
+    w_in = gear_valley_w + 0.1 - 2 * clr;
+    w_out = w_in + gear_key_depth * 0.8;
+    difference() {
+      circle(r = rt);
+      for (i = [0 : gear_teeth - 1]) rotate(i * 360 / gear_teeth)
+        polygon([[ri, -w_in / 2], [rt + 0.5, -w_out / 2], [rt + 0.5, w_out / 2], [ri, w_in / 2]]);
+    }
   }
 }
 

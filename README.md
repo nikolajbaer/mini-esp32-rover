@@ -53,13 +53,14 @@ for p in chassis deck sprocket idler pin track hubtest; do
 done
 ```
 
-The motors end in a small pinion gear, so the sprocket hub has a matching
-star socket. Count the pinion's teeth and measure its tip and root diameters
-(`gear_teeth`, `gear_od`, `gear_root_d`). Then print `hubtest`: three pucks with
-the socket at 0.1 mm tighter, nominal, and 0.1 mm looser (1, 2, 3 notches).
-Set `gear_fit` to match the one the pinion presses into snugly. If your printer
-cannot resolve the star, `gear_teeth = 0` gives a plain undersized round bore
-to force the pinion into. For a plain D shaft set `shaft_type = "d"`.
+The motors end in a small pinion gear (6 teeth, 4.46 mm across the tips), so
+the sprocket hub has a round bore with six keys that drop into the valleys
+between the teeth (`gear_teeth`, `gear_od`, `gear_valley_w`). Print `hubtest`
+first: three pucks with the socket 0.1 mm tighter, nominal, and 0.1 mm looser
+(1, 2, 3 notches). Set `gear_fit` to match the one the pinion presses into
+snugly. If your printer cannot resolve the keys, `gear_teeth = 0` gives a plain
+undersized round bore to force the pinion into. For a plain D shaft set
+`shaft_type = "d"`.
 
 After that, good test prints are one `sprocket` (gearbox recess) and one
 `track` (tension). If the track is loose or tight, change `pretension`; if it
