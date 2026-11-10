@@ -248,10 +248,16 @@ module idler() {
 // at clearance gear_fit - 0.1 / gear_fit / gear_fit + 0.1 (1, 2, 3 notches).
 // Print this first and see which one the motor output presses into snugly.
 module hubtest() {
-  for (i = [0 : 2]) translate([i * 11, 0, 0]) difference() {
-    hull() { cylinder(d = 10, h = wheel_w - recess_depth); if (i < 2) translate([11, 0, 0]) cylinder(d = 4, h = 1); }
-    translate([0, 0, -eps]) linear_extrude(wheel_w) shaft_bore2d(gear_fit + (i - 1) * 0.1);
-    for (n = [0 : i]) translate([-1.6 + n * 1.6 - 0.4, 4, -eps]) cube([0.8, 2, wheel_w]);
+  h = wheel_w - recess_depth;
+  difference() {
+    union() {
+      for (i = [0 : 2]) translate([i * 11, 0, 0]) cylinder(d = 10, h = h);
+      translate([0, -2, 0]) cube([22, 4, 1]);  // web joining the pucks
+    }
+    for (i = [0 : 2]) translate([i * 11, 0, 0]) {
+      translate([0, 0, -eps]) linear_extrude(wheel_w) shaft_bore2d(gear_fit + (i - 1) * 0.1);
+      for (n = [0 : i]) translate([-1.6 + n * 1.6 - 0.4, 4, -eps]) cube([0.8, 2, wheel_w]);
+    }
   }
 }
 
