@@ -35,7 +35,7 @@ gear_fit = 0.1;       // clearance added all round the pinion profile
 shaft_d = 3.0;
 shaft_flat = 2.5;
 // Length of the pinion / shaft beyond the gearbox face
-shaft_len = 4;
+shaft_len = 3.5;      // 3 mm of teeth plus a 0.5 mm tip
 // Battery (602030), XIAO and DRV8833 board footprints
 batt = [30, 20, 6];
 xiao = [21, 17.8];
