@@ -13,12 +13,13 @@ part = "assembly";
 
 /* [Measure these on your parts] */
 // DC motor can: width, height (across the flats), length
-motor_w = 12;
-motor_h = 10;
-motor_len = 15;
+motor_d = 10;         // round can diameter
+motor_flat = 8;       // distance across the two flats
+motor_len = 11.25;    // can only
+motor_tail = 1.25;    // end boss and wire tabs behind the can
 // Gearbox: diameter and length (motor face to gearbox face)
 gbox_d = 10;
-gbox_len = 9;
+gbox_len = 7;
 // Output: "gear" = small pinion on the gearbox (star socket in the hub),
 //         "d"    = plain D shaft
 shaft_type = "gear";
@@ -75,12 +76,13 @@ axle_z = track_r;
 ax = wheelbase / 2;                            // axle x position (+/-)
 
 floor_top = ground_clearance + floor_t;
-motor_bot = axle_z - motor_h / 2;
-wall_top = axle_z + motor_h / 2;               // deck clamps the motors here
-bx = ax + motor_w / 2 + fit + end_wall;        // body half length
+body_d = max(motor_d, gbox_d);
+motor_bot = axle_z - body_d / 2;
+wall_top = axle_z + body_d / 2;                // deck clamps the motors here
+bx = ax + body_d / 2 + fit + end_wall;        // body half length
 by = inner_w / 2 + wall;                       // body half width
 rib_t = 1.2;
-rib_x = ax - motor_w / 2 - fit - rib_t;        // inner face of the motor pocket rib
+rib_x = ax - body_d / 2 - fit - rib_t;        // inner face of the motor pocket rib
 post_x = batt.x / 2 + 3.25;
 post_y = inner_w / 2 - 1.9;
 
@@ -98,14 +100,17 @@ assert(wheel_w - recess_depth >= 2.5, "sprocket hub too thin for the shaft");
 // ---------------------------------------------------------------- chassis --
 // side: +1 = motor shaft exits the left wall (+y), -1 = right wall.
 module motor_pocket_add(side) {
+  // The can drops in with its flats vertical, between two cheeks that stop it
+  // turning. The gearbox is wider than the flats, so the cheek ends (at the
+  // wall) also stop the motor sliding inward.
+  cheek_t = 1.5;
+  y0 = side > 0 ? inner_w / 2 - motor_len : -inner_w / 2;
+  for (sx = [-1, 1]) translate([sx > 0 ? motor_flat / 2 + fit : -motor_flat / 2 - fit - cheek_t, y0, floor_top - eps])
+    cube([cheek_t, motor_len, axle_z + 2 - floor_top]);
   // pads under the can
   for (dy = [2, motor_len - 5])
-    translate([-motor_w / 2 - fit, side > 0 ? inner_w / 2 - dy - 3 : -inner_w / 2 + dy, floor_top - eps])
-      cube([motor_w + 2 * fit, 3, motor_bot - floor_top + eps]);
-  // stop behind the can (kept low so it clears the terminals)
-  stop_y = inner_w / 2 - motor_len - fit;
-  translate([-motor_w / 2 - fit, side > 0 ? stop_y - 1.5 : -stop_y, floor_top - eps])
-    cube([motor_w + 2 * fit, 1.5, motor_bot - floor_top + 3]);
+    translate([-motor_flat / 2 - fit, side > 0 ? inner_w / 2 - dy - 3 : -inner_w / 2 + dy, floor_top - eps])
+      cube([motor_flat + 2 * fit, 3, motor_bot - floor_top + eps]);
   // boss for the idler pin on the opposite wall, carried down to the floor so it prints
   translate([0, -side * inner_w / 2, 0]) hull() {
     translate([0, 0, axle_z]) rotate([90, 0, 0])
@@ -302,7 +307,11 @@ module track() {
 
 // --------------------------------------------------------------- assembly --
 module motor_mock() {  // shaft along +y, origin at the motor/gearbox joint on the axis
-  color("silver") translate([-motor_w / 2, -motor_len, -motor_h / 2]) cube([motor_w, motor_len, motor_h]);
+  color("silver") rotate([90, 0, 0]) linear_extrude(motor_len) intersection() {
+    circle(d = motor_d);
+    square([motor_flat, motor_d], center = true);
+  }
+  color("dimgray") rotate([90, 0, 0]) cylinder(d = 4, h = motor_len + motor_tail);
   color("white") rotate([-90, 0, 0]) cylinder(d = gbox_d, h = gbox_len);
   color("white") rotate([-90, 0, 0]) cylinder(d = shaft_type == "d" ? shaft_d : gear_od, h = gbox_len + shaft_len);
 }

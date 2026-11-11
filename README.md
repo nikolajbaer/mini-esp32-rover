@@ -115,7 +115,10 @@ The rover stops by itself if it hears nothing from the phone for 400 ms.
 
 1. Solder motor leads (about 60 mm) and wire the boards as above. Test on the
    bench before anything goes in the chassis.
-2. Drop the motors into their pockets, gearbox through the U-slot in the wall.
+2. Drop the motors into their pockets with the flats of the can vertical,
+   between the two cheeks, and the gearbox through the U-slot in the wall. The
+   cheeks stop the motor turning or sliding inward; only the deck's clamp
+   stops it sliding outward, so add a dab of hot glue behind the can.
 3. Stick the battery to the floor between the motors with foam tape.
 4. Feed the wires up through the deck slot and screw the deck down.
 5. Tape the XIAO (USB-C to the rear) and DRV8833 between their corner tabs.
