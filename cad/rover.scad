@@ -39,7 +39,7 @@ shaft_len = 3.5;      // 3 mm of teeth plus a 0.5 mm tip
 // Battery (602030), XIAO and DRV8833 board footprints
 batt = [30, 20, 6];
 xiao = [21, 17.8];
-drv = [18, 18];
+drv = [18.6, 16];     // long side runs fore-aft
 
 /* [Tracks] */
 pitch = 5;            // tooth pitch along the belt
