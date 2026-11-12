@@ -311,33 +311,62 @@ function belt_pose(s, run) =
   let (a = (s - 2 * run - arc) / R * 180 / PI) [-h - R * sin(a), -R * cos(a), 180 - a];
 
 tooth_pts = [[-1.1, -band_t / 2 + eps], [-0.7, -band_t / 2 - tooth_h], [0.7, -band_t / 2 - tooth_h], [1.1, -band_t / 2 + eps]];
-tread_pts = [[-1.3, band_t / 2 - eps], [-0.9, band_t / 2 + tread_h], [0.9, band_t / 2 + tread_h], [1.3, band_t / 2 - eps]];
+// tread bar, drawn from the belt's inner surface up to the tread top
+bar_pts = [[-1.3, -band_t / 2], [-1.3, band_t / 2], [-0.9, band_t / 2 + tread_h], [0.9, band_t / 2 + tread_h], [1.3, band_t / 2], [1.3, -band_t / 2]];
 belt_len = 2 * wheelbase + 2 * PI * pitch_r + track_slack;   // along the pitch line
+
+// Track cross-section. The flat band runs between the wheel flanges; its edges
+// flare outward at 45 degrees over the flanges, so the tread is as wide as the
+// wheel and hides it. The flare matches the flange cone, and is also what lets
+// the track print standing on its edge without supports.
+track_w = wheel_w;                 // overall width
+wing = flange + 0.6;               // flare width (and rise) each side
+wing_t = 1.0;                      // flare thickness, measured radially
 
 // The printable track: a round ring standing on its edge (TPU). Printing it
 // round keeps the wall even all the way around, so it runs true.
 module track() {
   R = belt_len / (2 * PI);
-  linear_extrude(belt_w) {
-    difference() {
-      circle(r = R + band_t / 2, $fn = 240);
-      circle(r = R - band_t / 2, $fn = 240);
+  Ri = R - band_t / 2;             // inner surface of the flat band
+  W = track_w;
+  n = belt_teeth;
+  difference() {
+    union() {
+      // band with flared edges
+      rotate_extrude($fn = 240) polygon([
+        [Ri + wing, 0], [Ri, wing], [Ri, W - wing], [Ri + wing, W],
+        [Ri + wing + wing_t, W], [Ri + band_t, W - wing], [Ri + band_t, wing], [Ri + wing + wing_t, 0]]);
+      // tread bars, full width
+      for (i = [0 : n - 1]) {
+        b = (i + 0.5) * 360 / n;
+        translate([R * cos(b), R * sin(b), 0]) rotate(b - 90) linear_extrude(W) polygon(bar_pts);
+      }
+      // drive teeth on the flat band only, ends chamfered so they print
+      intersection() {
+        for (i = [0 : n - 1]) {
+          a = i * 360 / n;
+          translate([R * cos(a), R * sin(a), 0]) rotate(a - 90) linear_extrude(W) polygon(tooth_pts);
+        }
+        rotate_extrude($fn = 240) polygon([
+          [Ri + 0.2, wing], [Ri - tooth_h - 0.1, wing + tooth_h + 0.3],
+          [Ri - tooth_h - 0.1, W - wing - tooth_h - 0.3], [Ri + 0.2, W - wing]]);
+      }
     }
-    for (i = [0 : belt_teeth - 1]) {
-      a = i * 360 / belt_teeth;
-      translate([R * cos(a), R * sin(a)]) rotate(a - 90) polygon(tooth_pts);
-      b = (i + 0.5) * 360 / belt_teeth;
-      translate([R * cos(b), R * sin(b)]) rotate(b - 90) polygon(tread_pts);
-    }
+    // keep the bars clear of the wheel flanges
+    rotate_extrude($fn = 240) polygon([[0, -1], [Ri + wing + 1, -1], [Ri, wing], [Ri, W - wing], [Ri + wing + 1, W + 1], [0, W + 1]]);
+    // slit the flares between the bars so they add no hoop stiffness
+    for (i = [0 : n - 1]) rotate(i * 360 / n) for (z = [-1, W - wing + 0.2])
+      translate([Ri - 0.5, -0.3, z]) cube([wing + wing_t + tread_h + 2, 0.6, wing + 0.8]);
   }
 }
 
-// The same belt wrapped around the two wheels, for the assembly view only.
+// A simplified belt wrapped around the two wheels, for the assembly view only.
+// Occupies z = 0..track_w.
 module track_fitted() {
   run = wheelbase;
   len = 2 * run + 2 * PI * pitch_r;
   step = len / belt_teeth;
-  linear_extrude(belt_w) {
+  translate([0, 0, wing]) linear_extrude(track_w - 2 * wing) {
     difference() {
       hull() for (x = [-run / 2, run / 2]) translate([x, 0]) circle(r = pitch_r + band_t / 2, $fn = 96);
       hull() for (x = [-run / 2, run / 2]) translate([x, 0]) circle(r = pitch_r - band_t / 2, $fn = 96);
@@ -345,9 +374,14 @@ module track_fitted() {
     for (i = [0 : belt_teeth - 1]) {
       p = belt_pose((i * step + run / 2) % len, run);
       translate([p.x, p.y]) rotate(p[2]) polygon(tooth_pts);
-      q = belt_pose(((i + 0.5) * step + run / 2) % len, run);
-      translate([q.x, q.y]) rotate(q[2]) polygon(tread_pts);
     }
+  }
+  linear_extrude(track_w) difference() {
+    for (i = [0 : belt_teeth - 1]) {
+      q = belt_pose(((i + 0.5) * step + run / 2) % len, run);
+      translate([q.x, q.y]) rotate(q[2]) polygon(bar_pts);
+    }
+    hull() for (x = [-run / 2, run / 2]) translate([x, 0]) circle(r = sprocket_r + wing, $fn = 96);
   }
 }
 
@@ -369,7 +403,7 @@ module side_parts(side) {  // side +1 = left
   translate([drive_x, side * (wy + wheel_w), axle_z]) rotate([side * 90, 0, 0]) color("orange") rotate(90) sprocket();
   translate([-drive_x, side * (wy + wheel_w), axle_z]) rotate([side * 90, 0, 0]) color("gold") rotate(90) idler();
   translate([-drive_x, side * (wy + wheel_w + 0.3 + 1.2), axle_z]) rotate([side * 90, 0, 0]) color("gold") pin();
-  translate([0, side * (wy + flange + 0.2 + (side > 0 ? belt_w : 0)), axle_z]) rotate([90, 0, 0]) color("dimgray") track_fitted();
+  translate([0, side * (wy + (side > 0 ? track_w : 0)), axle_z]) rotate([90, 0, 0]) color("dimgray") track_fitted();
   translate([drive_x, side * (inner_w / 2 - gbox_len), axle_z]) rotate([0, 0, side > 0 ? 0 : 180]) motor_mock();
 }
 
