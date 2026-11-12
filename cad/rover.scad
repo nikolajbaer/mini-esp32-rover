@@ -37,14 +37,14 @@ shaft_flat = 2.5;
 // Length of the pinion / shaft beyond the gearbox face
 shaft_len = 3.5;      // 3 mm of teeth plus a 0.5 mm tip
 // Battery (602030), XIAO and DRV8833 board footprints
-batt = [30, 20, 6];
+batt = [34, 20, 6];    // length includes the protection board and wire tab
 xiao = [21, 17.8];
 drv = [18.6, 16];     // long side runs fore-aft
 
 /* [Tracks] */
 pitch = 5;            // tooth pitch along the belt
 sprocket_teeth = 12;
-belt_teeth = 34;      // sets the wheelbase: (belt_teeth - sprocket_teeth) * pitch / 2
+belt_teeth = 32;      // sets the wheelbase: (belt_teeth - sprocket_teeth) * pitch / 2
 belt_w = 8;
 band_t = 1.0;         // thickness of the flexible band
 tooth_h = 1.2;        // inner drive teeth
@@ -52,7 +52,7 @@ tread_h = 2.0;        // outer grip bars; taller = more ground clearance
 track_slack = 1.0;    // extra belt length over the exact fit (negative = tighter)
 
 /* [Body] */
-inner_w = 28;         // inside width of the tub
+inner_w = 24.6;       // inside width of the tub
 wall = 2;
 end_wall = 1.6;
 floor_t = 1.6;
@@ -86,8 +86,12 @@ bx = ax + body_d / 2 + fit + end_wall;        // body half length
 by = inner_w / 2 + wall;                       // body half width
 rib_t = 1.2;
 rib_x = ax - body_d / 2 - fit - rib_t;        // inner face of the motor pocket rib
-post_x = batt.x / 2 + 3.25;
-post_y = inner_w / 2 - 1.9;
+// Deck screw posts: shallow ribs beside the battery, with the pilot hole set
+// partly into the wall so they need little room.
+post_w = 4.2;
+post_depth = (inner_w - batt.y - 0.6) / 2;
+post_x = rib_x - 1.7;
+post_y = inner_w / 2 - 0.6;
 
 flange = 1.2;                                  // 45 degree belt guide flanges
 wheel_gap = 0.6;                               // wall to wheel
@@ -97,7 +101,9 @@ boss_len = 3;                                  // idler pin boss inside the wall
 pin_len = wall + boss_len + wheel_gap + wheel_w + 0.3;
 
 assert(motor_bot >= floor_top, "motor sits below the floor: more teeth or less clearance");
-assert(batt.x / 2 < rib_x - 4, "battery bay too short: raise belt_teeth");
+assert(batt.x / 2 + 1 <= rib_x, "battery bay too short: raise belt_teeth");
+assert(post_depth >= 1.9, "no room for the screw posts beside the battery: raise inner_w");
+assert(inner_w >= gbox_len + motor_len + motor_tail + 3 + 1.9, "motor does not fit across the tub: raise inner_w");
 
 // ---------------------------------------------------------------- chassis --
 // side: +1 = motor shaft exits the left wall (+y), -1 = right wall.
@@ -146,8 +152,8 @@ module chassis() {
       for (s = [-1, 1]) translate([s > 0 ? rib_x : -rib_x - rib_t, -inner_w / 2 - eps, floor_top - eps])
         cube([rib_t, inner_w + 2 * eps, axle_z - floor_top]);
       // screw posts for the deck
-      for (sx = [-1, 1], sy = [-1, 1]) translate([sx * post_x - 2.5, sy > 0 ? inner_w / 2 - 3.8 : -inner_w / 2 - eps, floor_top - eps])
-        cube([5, 3.8 + eps, wall_top - floor_top + eps]);
+      for (sx = [-1, 1], sy = [-1, 1]) translate([sx * post_x - post_w / 2, sy > 0 ? inner_w / 2 - post_depth : -inner_w / 2 - eps, floor_top - eps])
+        cube([post_w, post_depth + eps, wall_top - floor_top + eps]);
       translate([ax, 0, 0]) motor_pocket_add(1);
       translate([-ax, 0, 0]) motor_pocket_add(-1);
     }

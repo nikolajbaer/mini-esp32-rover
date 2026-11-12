@@ -1,6 +1,6 @@
 # Mini ESP32 rover
 
-A palm-sized tracked rover (about 79 × 55 × 24 mm) driven from a phone over Wi-Fi.
+A palm-sized tracked rover (about 74 × 51 × 24 mm) driven from a phone over Wi-Fi.
 
 ![Assembly render](docs/assembly.png)
 
