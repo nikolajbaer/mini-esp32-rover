@@ -44,7 +44,7 @@ Ready-made STLs are in [`cad/stl/`](cad/stl), each already oriented for printing
 | `sprocket.stl` | 2 | PETG | as oriented (nose up), no supports |
 | `idler.stl` | 2 | PETG | |
 | `pin.stl` | 2 | PETG | head down |
-| `track.stl` | 2 | TPU | a round ring standing on edge, no supports; 0.4 mm nozzle |
+| `track.stl` | 2 | TPU | a round ring standing on edge; 0.4 mm nozzle, 2 walls |
 | `hubtest.stl` | 1 | PETG | fit test for the motor output, print this first |
 
 **Measure your parts before printing.** With calipers, check the values in the
