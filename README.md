@@ -68,6 +68,8 @@ skips, raise `tooth_h`.
 
 ## Wiring
 
+![Wiring diagram](docs/wiring.png)
+
 ```
 LiPo +  ──[optional slide switch]──┬── XIAO BAT+ (pad on the underside)
                                    └── DRV8833 VCC / VM
@@ -85,6 +87,8 @@ XIAO D3 ── IN4
   breakouts pull it up already; if the motors are dead, wire it to XIAO `3V3`.
 - A 100–470 µF capacitor across the driver's VCC and GND helps stop the ESP32
   resetting when the motors start.
+- Optional: a 0.1 µF ceramic capacitor soldered across each motor's two
+  terminals cuts electrical noise. No resistors are needed.
 - With the battery on the BAT pads, the XIAO charges it over USB-C. Use a cell
   with a protection board (the XIAO has no low-voltage cut-off).
 - Solder wires straight to the boards; there is no room for pin headers.
