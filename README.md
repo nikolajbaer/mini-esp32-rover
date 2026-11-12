@@ -1,6 +1,6 @@
 # Mini ESP32 rover
 
-A palm-sized tracked rover (about 74 × 51 × 24 mm) driven from a phone over Wi-Fi.
+A palm-sized tracked rover (about 59 × 51 × 25 mm) driven from a phone over Wi-Fi.
 
 ![Assembly render](docs/assembly.png)
 
@@ -9,13 +9,14 @@ A palm-sized tracked rover (about 74 × 51 × 24 mm) driven from a phone over Wi
 | Controller | Seeed Studio XIAO ESP32-C6 (C3 / S3 also work) |
 | Motor driver | DRV8833 dual H-bridge breakout |
 | Motors | 2 × micro DC gear motor with plastic gearbox |
-| Battery | 602030 LiPo, 3.7 V 300 mAh |
+| Battery | 602030 LiPo, 3.7 V 300 mAh (33 × 20 × 6.25 mm) |
 | Printed | PETG chassis, deck, wheels, pins; TPU tracks |
 | Hardware | 4 × M2 × 8 self-tapping screws, double-sided foam tape |
 
-> **Status:** first design pass. The CAD dimensions for the motors and boards
-> were estimated from a photo, the parts have not been test printed, and the
-> firmware has not yet been compiled or run on hardware. Expect to tune.
+> **Status:** work in progress. The motor pockets, sprocket hubs and tracks
+> have been through one round of test prints; the stacked layout below has
+> not been printed yet, and the firmware has not been compiled or run on
+> hardware. Expect to tune.
 
 ## Layout
 
@@ -23,9 +24,13 @@ The two motors lie crosswise and staggered: the left track is driven at the
 front, the right track at the rear, with a free-spinning idler at the other end
 of each track. That keeps the body only a little wider than one motor is long.
 Each motor is captured inside the tub and its sprocket reaches in through the
-wall to meet it. The battery lies on the floor
-between the motors; a deck screws on top, clamps the motors down and carries the
-XIAO (USB-C facing the rear) and the DRV8833.
+wall to meet it.
+
+Between the motors the parts are stacked to keep the chassis short (48.6 mm):
+the DRV8833 lies on the floor, the XIAO sits on shelves above it, and the
+battery rides on top of the deck. The XIAO's USB-C socket faces out of the left
+wall, so the cable plugs in from the side, through the window between the two
+wheels and the track runs. That window is 14.5 mm wide: use a slim plug.
 
 ## Printing
 
@@ -118,15 +123,18 @@ The rover stops by itself if it hears nothing from the phone for 400 ms.
 
 ## Assembly
 
-1. Solder motor leads (about 60 mm) and wire the boards as above. Test on the
-   bench before anything goes in the chassis.
+1. Solder the wiring with the boards outside the chassis (motor leads about
+   40 mm, battery leads left long) and bench test it.
 2. Drop the motors into their pockets with the flats of the can vertical,
    between the two cheeks, and the pinion in the U-slot in the wall. The
    gearbox is trapped between the wall and the cheek ends, the cheeks stop the
    motor turning, and the deck holds it down.
-3. Stick the battery to the floor between the motors with foam tape.
-4. Feed the wires up through the deck slot and screw the deck down.
-5. Tape the XIAO (USB-C to the rear) and DRV8833 between their corner tabs.
-6. Press the sprockets onto the motor shafts. For each side, loop a track over
+3. Lay the DRV8833 on the floor of the middle bay (foam tape underneath).
+4. Lower the XIAO onto its shelves above the driver, USB-C socket into the
+   notch in the left wall and antenna end against the stop on the right.
+   Stick a pad of foam tape on top of its metal can so the deck presses it down.
+5. Thread the battery leads up through the slot in the deck, screw the deck
+   on, and tape the battery between the rails on top.
+6. Press the sprockets onto the motor pinions. For each side, loop a track over
    the sprocket and an idler, then push the pin through the idler into the wall.
    A drop of glue on the pin if it is loose.

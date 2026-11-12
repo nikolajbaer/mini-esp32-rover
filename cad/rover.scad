@@ -7,7 +7,9 @@
 // Axes in the assembly: +x forward, +y left, +z up, ground at z = 0.
 // The two motors sit crosswise and staggered: the left track is driven at the
 // front, the right track at the rear. That keeps the body barely wider than
-// one motor is long.
+// one motor is long. Between them the driver board lies on the floor with the
+// XIAO above it, USB-C port out through the left wall between the track runs.
+// The battery rides on top of the deck.
 
 part = "assembly";
 
@@ -37,14 +39,15 @@ shaft_flat = 2.5;
 // Length of the pinion / shaft beyond the gearbox face
 shaft_len = 3.5;      // 3 mm of teeth plus a 0.5 mm tip
 // Battery (602030), XIAO and DRV8833 board footprints
-batt = [34, 20, 6];    // length includes the protection board and wire tab
-xiao = [21, 17.8];
-drv = [18.6, 16];     // long side runs fore-aft
+batt = [33, 20, 6.25]; // length includes the protection board and wire tab
+xiao = [21, 17.8];    // length (USB end to antenna end), width
+drv = [18.6, 16];
+drv_h = 3.2;          // driver board thickness including its parts
 
 /* [Tracks] */
 pitch = 5;            // tooth pitch along the belt
 sprocket_teeth = 12;
-belt_teeth = 32;      // sets the wheelbase: (belt_teeth - sprocket_teeth) * pitch / 2
+belt_teeth = 26;      // sets the wheelbase: (belt_teeth - sprocket_teeth) * pitch / 2
 belt_w = 8;
 band_t = 1.0;         // thickness of the flexible band
 tooth_h = 1.2;        // inner drive teeth
@@ -86,12 +89,15 @@ bx = ax + body_d / 2 + fit + end_wall;        // body half length
 by = inner_w / 2 + wall;                       // body half width
 rib_t = 1.2;
 rib_x = ax - body_d / 2 - fit - rib_t;        // inner face of the motor pocket rib
-// Deck screw posts: shallow ribs beside the battery, with the pilot hole set
-// partly into the wall so they need little room.
-post_w = 4.2;
-post_depth = (inner_w - batt.y - 0.6) / 2;
-post_x = rib_x - 1.7;
-post_y = inner_w / 2 - 0.6;
+// Electronics bay between the motor pockets
+bay_x = rib_x;                                 // half length of the bay
+pcb_z = floor_top + drv_h + 2.3;               // underside of the XIAO, above the driver and its wires
+far_y = inner_w / 2 - xiao.x;                  // antenna end of the XIAO
+// Deck screws: two beside the XIAO's USB end, two behind its antenna end.
+// The pilot holes sit partly in the wall so the posts stay slim.
+post_x = xiao.y / 2 + 0.2 + 1.6;
+post_x2 = 4;
+post_y = inner_w / 2 - 0.3;
 
 flange = 1.2;                                  // 45 degree belt guide flanges
 wheel_gap = 0.6;                               // wall to wheel
@@ -101,8 +107,9 @@ boss_len = 3;                                  // idler pin boss inside the wall
 pin_len = wall + boss_len + wheel_gap + wheel_w + 0.3;
 
 assert(motor_bot >= floor_top, "motor sits below the floor: more teeth or less clearance");
-assert(batt.x / 2 + 1 <= rib_x, "battery bay too short: raise belt_teeth");
-assert(post_depth >= 1.9, "no room for the screw posts beside the battery: raise inner_w");
+assert(2 * bay_x >= max(xiao.y, drv.x) + 1, "electronics bay too short: raise belt_teeth");
+assert(inner_w >= xiao.x + 3.3, "XIAO does not fit across the tub: raise inner_w");
+assert(2 * bx >= batt.x + 3, "battery overhangs the deck");
 assert(inner_w >= gbox_len + motor_len + motor_tail + 3 + 1.9, "motor does not fit across the tub: raise inner_w");
 
 // ---------------------------------------------------------------- chassis --
@@ -141,6 +148,20 @@ module motor_pocket_cut(side) {
     cylinder(d = pin_hole_d, h = wall + boss_len + 2 * eps);
 }
 
+// Supports for the XIAO, and the deck screw posts, all rising from the floor.
+module bay_add() {
+  z0 = floor_top - eps;
+  // USB end: a shelf under each corner of the board, and a post beside it
+  for (sx = [-1, 1]) {
+    translate([sx > 0 ? 6.6 : -bay_x, inner_w / 2 - 2.5, z0]) cube([bay_x - 6.6, 2.5 + eps, pcb_z - z0]);
+    translate([sx > 0 ? xiao.y / 2 + 0.2 : -bay_x - rib_t, inner_w / 2 - 2, z0])
+      cube([bay_x + rib_t - xiao.y / 2 - 0.2, 2 + eps, wall_top - z0]);
+  }
+  // antenna end: a shelf under the board and a full-height stop behind it
+  translate([-6.3, -inner_w / 2 - eps, z0]) cube([12.6, far_y + 1.2 + inner_w / 2, pcb_z - z0]);
+  translate([-6.3, -inner_w / 2 - eps, z0]) cube([12.6, far_y - 0.25 + inner_w / 2, wall_top - z0]);
+}
+
 module chassis() {
   difference() {
     union() {
@@ -151,51 +172,46 @@ module chassis() {
       // ribs closing the motor pockets (wires pass over the top)
       for (s = [-1, 1]) translate([s > 0 ? rib_x : -rib_x - rib_t, -inner_w / 2 - eps, floor_top - eps])
         cube([rib_t, inner_w + 2 * eps, axle_z - floor_top]);
-      // screw posts for the deck
-      for (sx = [-1, 1], sy = [-1, 1]) translate([sx * post_x - post_w / 2, sy > 0 ? inner_w / 2 - post_depth : -inner_w / 2 - eps, floor_top - eps])
-        cube([post_w, post_depth + eps, wall_top - floor_top + eps]);
+      bay_add();
       translate([ax, 0, 0]) motor_pocket_add(1);
       translate([-ax, 0, 0]) motor_pocket_add(-1);
     }
     translate([ax, 0, 0]) motor_pocket_cut(1);
     translate([-ax, 0, 0]) motor_pocket_cut(-1);
-    for (sx = [-1, 1], sy = [-1, 1]) translate([sx * post_x, sy * post_y, wall_top - 8])
-      cylinder(d = screw_pilot_d, h = 8 + eps);
+    // open-topped notch in the left wall for the USB-C socket
+    translate([-5.1, inner_w / 2 - eps, pcb_z + 0.9]) cube([10.2, wall + 2 * eps, wall_top]);
+    for (sx = [-1, 1]) {
+      translate([sx * post_x, post_y, wall_top - 8]) cylinder(d = screw_pilot_d, h = 8 + eps);
+      translate([sx * post_x2, -post_y, wall_top - 8]) cylinder(d = screw_pilot_d, h = 8 + eps);
+    }
   }
 }
 
 // ------------------------------------------------------------------- deck --
-// Clamps the motors and carries the electronics. XIAO at the rear with its
-// USB-C port pointing backwards, DRV8833 at the front.
-xiao_x = -bx;                       // rear edge of the XIAO pocket
-drv_x = bx - 1.2 - drv.x - fit;     // rear edge of the DRV pocket
-
-module corner_tabs(size, h = 2.5, t = 1.2, len = 4) {
-  for (cx = [0, 1], cy = [0, 1])
-    translate([cx * size.x, cy * size.y, 0]) mirror([cx, 0, 0]) mirror([0, cy, 0]) {
-      translate([-t, -t, 0]) cube([len, t, h]);
-      translate([-t, -t, 0]) cube([t, len, h]);
-    }
-}
-
+// Clamps the motors, closes the bay and carries the battery between low rails.
+// Flat underneath, so it prints without supports.
 module deck() {
-  slot_x0 = xiao_x + xiao.x - 4;
-  slot_x1 = drv_x + 3;
+  rail_h = 3; rail_t = 1.2;
+  ex = batt.x / 2 + 0.2;            // battery end
+  ey = batt.y / 2 + 0.2;            // battery side
   difference() {
     union() {
       translate([-bx, -by, 0]) cube([2 * bx, 2 * by, deck_t]);
-      // XIAO: side tabs only, so the USB end stays open
-      translate([xiao_x + 3, -xiao.y / 2 - fit, deck_t - eps])
-        corner_tabs([xiao.x - 3 + fit, xiao.y + 2 * fit]);
-      translate([drv_x, -drv.y / 2 - fit, deck_t - eps])
-        corner_tabs([drv.x + 2 * fit, drv.y + 2 * fit]);
+      translate([0, 0, deck_t - eps]) {
+        // rear end stop, and a front one that leaves the right side open for the leads
+        translate([-ex - rail_t, -ey - rail_t, 0]) cube([rail_t, 2 * (ey + rail_t), rail_h]);
+        translate([ex, -2, 0]) cube([rail_t, ey + rail_t + 2, rail_h]);
+        // short side rails at the corners, clear of the screw heads
+        for (sx = [-1, 1]) translate([sx > 0 ? ex - 4 : -ex - rail_t, ey, 0]) cube([4 + rail_t, rail_t, rail_h]);
+        translate([-ex - rail_t, -ey - rail_t, 0]) cube([4 + rail_t, rail_t, rail_h]);
+      }
     }
-    // the rear tabs of the XIAO pocket would block the USB plug: trim flush
-    translate([-bx - 5, -by, deck_t]) cube([5, 2 * by, 10]);
-    // wire slot between (and a little under) the boards
-    hull() for (x = [slot_x0 + 4, slot_x1 - 4]) translate([x, 0, -eps]) cylinder(d = 8, h = deck_t + 2 * eps);
-    for (sx = [-1, 1], sy = [-1, 1]) translate([sx * post_x, sy * post_y, -eps])
-      cylinder(d = screw_clear_d, h = deck_t + 2 * eps);
+    // slot for the battery leads, down into the corner of the bay behind the XIAO
+    hull() for (x = [7.8, 9.8]) translate([x, -inner_w / 2 + 1.4, -eps]) cylinder(d = 2.6, h = deck_t + 2 * eps);
+    for (sx = [-1, 1]) {
+      translate([sx * post_x, post_y, -eps]) cylinder(d = screw_clear_d, h = deck_t + 2 * eps);
+      translate([sx * post_x2, -post_y, -eps]) cylinder(d = screw_clear_d, h = deck_t + 2 * eps);
+    }
   }
 }
 
@@ -357,16 +373,22 @@ module side_parts(side) {  // side +1 = left
   translate([drive_x, side * (inner_w / 2 - gbox_len), axle_z]) rotate([0, 0, side > 0 ? 0 : 180]) motor_mock();
 }
 
+module electronics_mock() {
+  // driver board on the floor, XIAO above it with its USB-C socket in the wall notch
+  dy = (far_y + 1.2 + inner_w / 2 - 2.5) / 2;
+  color("purple") translate([-drv.x / 2, dy - drv.y / 2, floor_top]) cube([drv.x, drv.y, 1.6]);
+  color("darkgreen") translate([-xiao.y / 2, far_y, pcb_z]) cube([xiao.y, xiao.x, 1.2]);
+  color("silver") translate([-6, far_y + 1.5, pcb_z + 1.2]) cube([12, 12.5, 2.4]);
+  color("gainsboro") translate([-4.5, inner_w / 2 - 6, pcb_z + 1.2]) cube([9, 7.3, 3.2]);
+}
+
 module assembly() {
   color("steelblue") chassis();
   color("lightsteelblue", 0.9) translate([0, 0, wall_top]) deck();
   side_parts(1);
   side_parts(-1);
-  color("gold") translate([-batt.x / 2, -batt.y / 2, floor_top]) cube(batt);
-  color("darkgreen") translate([xiao_x, -xiao.y / 2, wall_top + deck_t]) cube([xiao.x, xiao.y, 1.2]);
-  color("silver") translate([xiao_x + 7, -6, wall_top + deck_t + 1.2]) cube([12.5, 12, 2.4]);
-  color("silver") translate([xiao_x - 1.5, -4.5, wall_top + deck_t + 1.2]) cube([7.5, 9, 3.2]);
-  color("purple") translate([drv_x + fit, -drv.y / 2, wall_top + deck_t]) cube([drv.x, drv.y, 1.6]);
+  color("gold") translate([-batt.x / 2, -batt.y / 2, wall_top + deck_t]) cube(batt);
+  electronics_mock();
 }
 
 // Everything rigid on one plate (PETG). Print the tracks separately in TPU.
