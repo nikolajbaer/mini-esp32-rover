@@ -1,6 +1,6 @@
 # Mini ESP32 rover
 
-A palm-sized tracked rover (about 77 × 55 × 22 mm) driven from a phone over Wi-Fi.
+A palm-sized tracked rover (about 79 × 55 × 24 mm) driven from a phone over Wi-Fi.
 
 ![Assembly render](docs/assembly.png)
 
@@ -22,7 +22,8 @@ A palm-sized tracked rover (about 77 × 55 × 22 mm) driven from a phone over Wi
 The two motors lie crosswise and staggered: the left track is driven at the
 front, the right track at the rear, with a free-spinning idler at the other end
 of each track. That keeps the body only a little wider than one motor is long.
-Each gearbox nests inside its drive sprocket. The battery lies on the floor
+Each motor is captured inside the tub and its sprocket reaches in through the
+wall to meet it. The battery lies on the floor
 between the motors; a deck screws on top, clamps the motors down and carries the
 XIAO (USB-C facing the rear) and the DRV8833.
 
@@ -35,10 +36,10 @@ Ready-made STLs are in [`cad/stl/`](cad/stl), each already oriented for printing
 | --- | --- | --- | --- |
 | `chassis.stl` | 1 | PETG | open side up, no supports |
 | `deck.stl` | 1 | PETG | flat side down |
-| `sprocket.stl` | 2 | PETG | as oriented (gearbox recess up), no supports |
+| `sprocket.stl` | 2 | PETG | as oriented (nose up), no supports |
 | `idler.stl` | 2 | PETG | |
 | `pin.stl` | 2 | PETG | head down |
-| `track.stl` | 2 | TPU | standing on edge as oriented; 0.4 mm nozzle, 2 walls |
+| `track.stl` | 2 | TPU | a round ring standing on edge; 0.4 mm nozzle, 2 walls |
 | `hubtest.stl` | 1 | PETG | fit test for the motor output, print this first |
 
 **Measure your parts before printing.** With calipers, check the values in the
@@ -62,8 +63,8 @@ snugly. If your printer cannot resolve the keys, `gear_teeth = 0` gives a plain
 undersized round bore to force the pinion into. For a plain D shaft set
 `shaft_type = "d"`.
 
-After that, good test prints are one `sprocket` (gearbox recess) and one
-`track` (tension). If the track is loose or tight, change `pretension`; if it
+After that, good test prints are one `sprocket` and one `track` (tension). If the
+track is loose or tight, change `track_slack`; if it
 skips, raise `tooth_h`.
 
 ## Wiring
@@ -120,9 +121,9 @@ The rover stops by itself if it hears nothing from the phone for 400 ms.
 1. Solder motor leads (about 60 mm) and wire the boards as above. Test on the
    bench before anything goes in the chassis.
 2. Drop the motors into their pockets with the flats of the can vertical,
-   between the two cheeks, and the gearbox through the U-slot in the wall. The
-   cheeks stop the motor turning or sliding inward; only the deck's clamp
-   stops it sliding outward, so add a dab of hot glue behind the can.
+   between the two cheeks, and the pinion in the U-slot in the wall. The
+   gearbox is trapped between the wall and the cheek ends, the cheeks stop the
+   motor turning, and the deck holds it down.
 3. Stick the battery to the floor between the motors with foam tape.
 4. Feed the wires up through the deck slot and screw the deck down.
 5. Tape the XIAO (USB-C to the rear) and DRV8833 between their corner tabs.

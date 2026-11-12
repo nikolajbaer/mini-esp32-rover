@@ -48,21 +48,23 @@ belt_teeth = 34;      // sets the wheelbase: (belt_teeth - sprocket_teeth) * pit
 belt_w = 8;
 band_t = 1.0;         // thickness of the flexible band
 tooth_h = 1.2;        // inner drive teeth
-tread_h = 0.8;        // outer grip bars
-pretension = 0.5;     // belt is modelled this much short per run so it sits snug
+tread_h = 2.0;        // outer grip bars; taller = more ground clearance
+track_slack = 1.0;    // extra belt length over the exact fit (negative = tighter)
 
 /* [Body] */
 inner_w = 28;         // inside width of the tub
 wall = 2;
 end_wall = 1.6;
 floor_t = 1.6;
-ground_clearance = 3;
 deck_t = 1.6;
 screw_pilot_d = 1.7;  // M2 self-tapping into plastic
 screw_clear_d = 2.3;
 pin_d = 4.0;          // idler axle pin
 pin_hole_d = 4.1;     // hole in the chassis wall (light press fit)
 fit = 0.2;            // general sliding clearance
+motor_fit = 0.05;     // per-side clearance on the motor flats (grip)
+gbox_boss_h = 0.5;    // raised ring around the pinion on the gearbox face, if any
+nose_d = 7.4;         // sprocket hub nose that reaches through the wall
 
 /* [Hidden] */
 $fn = 64;
@@ -75,9 +77,10 @@ track_r = pitch_r + band_t / 2 + tread_h;
 axle_z = track_r;
 ax = wheelbase / 2;                            // axle x position (+/-)
 
-floor_top = ground_clearance + floor_t;
 body_d = max(motor_d, gbox_d);
 motor_bot = axle_z - body_d / 2;
+floor_top = motor_bot - 1.25;                  // pads lift the motor off the floor
+ground_clearance = floor_top - floor_t;        // follows the track thickness
 wall_top = axle_z + body_d / 2;                // deck clamps the motors here
 bx = ax + body_d / 2 + fit + end_wall;        // body half length
 by = inner_w / 2 + wall;                       // body half width
@@ -89,26 +92,27 @@ post_y = inner_w / 2 - 1.9;
 flange = 1.2;                                  // 45 degree belt guide flanges
 wheel_gap = 0.6;                               // wall to wheel
 wheel_w = belt_w + 0.4 + 2 * flange;
-recess_depth = gbox_len - wall - wheel_gap + 0.5;
+nose_len = wheel_gap + wall - gbox_boss_h - 0.3; // stops just short of the gearbox
 boss_len = 3;                                  // idler pin boss inside the wall
 pin_len = wall + boss_len + wheel_gap + wheel_w + 0.3;
 
 assert(motor_bot >= floor_top, "motor sits below the floor: more teeth or less clearance");
 assert(batt.x / 2 < rib_x - 4, "battery bay too short: raise belt_teeth");
-assert(wheel_w - recess_depth >= 2.5, "sprocket hub too thin for the shaft");
 
 // ---------------------------------------------------------------- chassis --
 // side: +1 = motor shaft exits the left wall (+y), -1 = right wall.
 module motor_pocket_add(side) {
-  // The can drops in with its flats vertical, between two cheeks that stop it
-  // turning. The gearbox is wider than the flats, so the cheek ends (at the
-  // wall) also stop the motor sliding inward.
+  // The whole motor sits inside the tub. The gearbox is trapped between the
+  // wall (whose slot only passes the pinion) and the ends of two cheeks; the
+  // cheeks grip the flats of the can so it cannot turn. The deck holds it down.
   cheek_t = 1.5;
-  y0 = side > 0 ? inner_w / 2 - motor_len : -inner_w / 2;
-  for (sx = [-1, 1]) translate([sx > 0 ? motor_flat / 2 + fit : -motor_flat / 2 - fit - cheek_t, y0, floor_top - eps])
-    cube([cheek_t, motor_len, axle_z + 2 - floor_top]);
-  // pads under the can
-  for (dy = [2, motor_len - 5])
+  cheek_len = motor_len;
+  cy = inner_w / 2 - gbox_len - 0.15;          // cheek start, measured from the centre line
+  for (sx = [-1, 1]) translate([sx > 0 ? motor_flat / 2 + motor_fit : -motor_flat / 2 - motor_fit - cheek_t,
+                                side > 0 ? cy - cheek_len : -cy, floor_top - eps])
+    cube([cheek_t, cheek_len, axle_z + 2.5 - floor_top]);
+  // pads under the gearbox and the can
+  for (dy = [1.5, gbox_len + 1, gbox_len + motor_len - 4])
     translate([-motor_flat / 2 - fit, side > 0 ? inner_w / 2 - dy - 3 : -inner_w / 2 + dy, floor_top - eps])
       cube([motor_flat + 2 * fit, 3, motor_bot - floor_top + eps]);
   // boss for the idler pin on the opposite wall, carried down to the floor so it prints
@@ -121,10 +125,10 @@ module motor_pocket_add(side) {
 }
 
 module motor_pocket_cut(side) {
-  // U slot for the gearbox
+  // U slot for the pinion and the sprocket nose; narrower than the gearbox
   translate([0, side * (inner_w / 2 - eps), 0]) rotate([0, 0, side > 0 ? 0 : 180]) {
-    translate([0, 0, axle_z]) rotate([-90, 0, 0]) cylinder(d = gbox_d + 2 * fit, h = wall + 2 * eps);
-    translate([-gbox_d / 2 - fit, 0, axle_z]) cube([gbox_d + 2 * fit, wall + 2 * eps, wall_top]);
+    translate([0, 0, axle_z]) rotate([-90, 0, 0]) cylinder(d = nose_d + 0.6, h = wall + 2 * eps);
+    translate([-nose_d / 2 - 0.3, 0, axle_z]) cube([nose_d + 0.6, wall + 2 * eps, wall_top]);
   }
   // idler pin hole, opposite wall
   translate([0, -side * (inner_w / 2 - boss_len - eps), axle_z]) rotate([side > 0 ? 90 : -90, 0, 0])
@@ -235,10 +239,12 @@ module shaft_bore2d(clr = gear_fit) {
 
 module sprocket() {
   difference() {
-    wheel_body();
-    translate([0, 0, -eps]) linear_extrude(wheel_w) shaft_bore2d();
-    // the gearbox nests inside the wheel
-    translate([0, 0, wheel_w - recess_depth]) cylinder(d = gbox_d + 0.8, h = recess_depth + eps);
+    union() {
+      wheel_body();
+      // nose: carries the socket through the wall to the gearbox face
+      translate([0, 0, wheel_w - eps]) cylinder(d = nose_d, h = nose_len);
+    }
+    translate([0, 0, -eps]) linear_extrude(wheel_w + nose_len + 1) shaft_bore2d();
   }
 }
 
@@ -253,7 +259,7 @@ module idler() {
 // at clearance gear_fit - 0.1 / gear_fit / gear_fit + 0.1 (1, 2, 3 notches).
 // Print this first and see which one the motor output presses into snugly.
 module hubtest() {
-  h = wheel_w - recess_depth;
+  h = 4;
   difference() {
     union() {
       for (i = [0 : 2]) translate([i * 11, 0, 0]) cylinder(d = 10, h = h);
@@ -282,9 +288,31 @@ function belt_pose(s, run) =
   s < 2 * run + arc ? [h - (s - run - arc), -R, 180] :
   let (a = (s - 2 * run - arc) / R * 180 / PI) [-h - R * sin(a), -R * cos(a), 180 - a];
 
-// Printed standing on its edge, as modelled (TPU).
+tooth_pts = [[-1.1, -band_t / 2 + eps], [-0.7, -band_t / 2 - tooth_h], [0.7, -band_t / 2 - tooth_h], [1.1, -band_t / 2 + eps]];
+tread_pts = [[-1.3, band_t / 2 - eps], [-0.9, band_t / 2 + tread_h], [0.9, band_t / 2 + tread_h], [1.3, band_t / 2 - eps]];
+belt_len = 2 * wheelbase + 2 * PI * pitch_r + track_slack;   // along the pitch line
+
+// The printable track: a round ring standing on its edge (TPU). Printing it
+// round keeps the wall even all the way around, so it runs true.
 module track() {
-  run = wheelbase - pretension;
+  R = belt_len / (2 * PI);
+  linear_extrude(belt_w) {
+    difference() {
+      circle(r = R + band_t / 2, $fn = 240);
+      circle(r = R - band_t / 2, $fn = 240);
+    }
+    for (i = [0 : belt_teeth - 1]) {
+      a = i * 360 / belt_teeth;
+      translate([R * cos(a), R * sin(a)]) rotate(a - 90) polygon(tooth_pts);
+      b = (i + 0.5) * 360 / belt_teeth;
+      translate([R * cos(b), R * sin(b)]) rotate(b - 90) polygon(tread_pts);
+    }
+  }
+}
+
+// The same belt wrapped around the two wheels, for the assembly view only.
+module track_fitted() {
+  run = wheelbase;
   len = 2 * run + 2 * PI * pitch_r;
   step = len / belt_teeth;
   linear_extrude(belt_w) {
@@ -293,14 +321,10 @@ module track() {
       hull() for (x = [-run / 2, run / 2]) translate([x, 0]) circle(r = pitch_r - band_t / 2, $fn = 96);
     }
     for (i = [0 : belt_teeth - 1]) {
-      // drive tooth, inside (phased so teeth sit at the wheel's 12 o'clock groove)
       p = belt_pose((i * step + run / 2) % len, run);
-      translate([p.x, p.y]) rotate(p[2])
-        polygon([[-1.1, -band_t / 2 + eps], [-0.7, -band_t / 2 - tooth_h], [0.7, -band_t / 2 - tooth_h], [1.1, -band_t / 2 + eps]]);
-      // tread bar, outside, between the teeth
+      translate([p.x, p.y]) rotate(p[2]) polygon(tooth_pts);
       q = belt_pose(((i + 0.5) * step + run / 2) % len, run);
-      translate([q.x, q.y]) rotate(q[2])
-        polygon([[-1.2, band_t / 2 - eps], [-0.8, band_t / 2 + tread_h], [0.8, band_t / 2 + tread_h], [1.2, band_t / 2 - eps]]);
+      translate([q.x, q.y]) rotate(q[2]) polygon(tread_pts);
     }
   }
 }
@@ -323,8 +347,8 @@ module side_parts(side) {  // side +1 = left
   translate([drive_x, side * (wy + wheel_w), axle_z]) rotate([side * 90, 0, 0]) color("orange") rotate(90) sprocket();
   translate([-drive_x, side * (wy + wheel_w), axle_z]) rotate([side * 90, 0, 0]) color("gold") rotate(90) idler();
   translate([-drive_x, side * (wy + wheel_w + 0.3 + 1.2), axle_z]) rotate([side * 90, 0, 0]) color("gold") pin();
-  translate([0, side * (wy + flange + 0.2 + (side > 0 ? belt_w : 0)), axle_z]) rotate([90, 0, 0]) color("dimgray") track();
-  translate([drive_x, side * inner_w / 2, axle_z]) rotate([0, 0, side > 0 ? 0 : 180]) motor_mock();
+  translate([0, side * (wy + flange + 0.2 + (side > 0 ? belt_w : 0)), axle_z]) rotate([90, 0, 0]) color("dimgray") track_fitted();
+  translate([drive_x, side * (inner_w / 2 - gbox_len), axle_z]) rotate([0, 0, side > 0 ? 0 : 180]) motor_mock();
 }
 
 module assembly() {
