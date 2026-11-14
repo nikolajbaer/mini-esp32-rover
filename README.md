@@ -1,6 +1,6 @@
 # Mini ESP32 rover
 
-A palm-sized tracked rover (about 59 × 51 × 25 mm) driven from a phone over Wi-Fi.
+A palm-sized tracked rover (about 60 × 52 × 32 mm) driven from a phone over Wi-Fi.
 
 ![Assembly render](docs/assembly.png)
 
@@ -9,9 +9,9 @@ A palm-sized tracked rover (about 59 × 51 × 25 mm) driven from a phone over Wi
 | Controller | Seeed Studio XIAO ESP32-C6 (C3 / S3 also work) |
 | Motor driver | DRV8833 dual H-bridge breakout |
 | Motors | 2 × micro DC gear motor with plastic gearbox |
-| Battery | 602030 LiPo, 3.7 V 300 mAh (33 × 20 × 6.25 mm) |
-| Printed | PETG chassis, deck, wheels, pins; TPU tracks |
-| Hardware | 4 × M2 × 8 self-tapping screws, double-sided foam tape |
+| Battery | LiPo, 3.7 V 850 mAh, 45 × 25 × 10 mm, with a red two-pin plug |
+| Printed | PETG chassis, deck, battery cover, wheels, pins; TPU tracks |
+| Hardware | 4 × M2 × 8 self-tapping screws, double-sided foam tape, a pigtail with the mating half of the battery plug |
 
 > **Status:** work in progress. The motor pockets, sprocket hubs and tracks
 > have been through one round of test prints; the stacked layout below has
@@ -28,7 +28,10 @@ wall to meet it.
 
 Between the motors the parts are stacked to keep the chassis short (48.6 mm):
 the DRV8833 lies on the floor, the XIAO sits on shelves above it, and the
-battery rides on top of the deck. The XIAO's USB-C socket faces out of the left
+battery rides on top of the deck under a snap-on cover. The deck overhangs the
+tub front and rear, between the tracks, to make room for the battery and a
+small compartment behind it for the battery's plug; only two leads pass down
+through the deck. The XIAO's USB-C socket faces out of the left
 wall, so the cable plugs in from the side, through the window between the two
 wheels and the track runs. That window is 14.5 mm wide: use a slim plug.
 
@@ -41,6 +44,7 @@ Ready-made STLs are in [`cad/stl/`](cad/stl), each already oriented for printing
 | --- | --- | --- | --- |
 | `chassis.stl` | 1 | PETG | open side up, no supports |
 | `deck.stl` | 1 | PETG | flat side down |
+| `cover.stl` | 1 | PETG | top face down as oriented, no supports |
 | `sprocket.stl` | 2 | PETG | as oriented (nose up), no supports |
 | `idler.stl` | 2 | PETG | |
 | `pin.stl` | 2 | PETG | head down |
@@ -133,8 +137,13 @@ The rover stops by itself if it hears nothing from the phone for 400 ms.
 4. Lower the XIAO onto its shelves above the driver, USB-C socket into the
    notch in the left wall and antenna end against the stop on the right.
    Stick a pad of foam tape on top of its metal can so the deck presses it down.
-5. Thread the battery leads up through the slot in the deck, screw the deck
-   on, and tape the battery between the rails on top.
-6. Press the sprockets onto the motor pinions. For each side, loop a track over
+5. Solder the mating plug's two leads into the wiring in place of the battery,
+   thread the plug up through the hole at the rear left of the deck, and screw
+   the deck on. Thin leads (24 AWG) are easiest: the passage beside the rear
+   motor is about 3 x 4 mm.
+6. Lay the battery on the deck ribs, plug it in, tuck the plug across the
+   compartment behind it and click the cover on. To remove the cover, press
+   one of the ridges in through its window and lift that end.
+7. Press the sprockets onto the motor pinions. For each side, loop a track over
    the sprocket and an idler, then push the pin through the idler into the wall.
    A drop of glue on the pin if it is loose.

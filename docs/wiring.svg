@@ -23,7 +23,7 @@
   <!-- battery -->
   <rect x="40" y="300" width="140" height="120" rx="10" fill="#f4e7b4" stroke="#8a7a3a" stroke-width="2"/>
   <text x="110" y="352" text-anchor="middle" font-weight="bold" fill="#1c2430">LiPo</text>
-  <text x="110" y="374" text-anchor="middle" fill="#1c2430">3.7 V 300 mAh</text>
+  <text x="110" y="374" text-anchor="middle" fill="#1c2430">3.7 V 850 mAh</text>
   <text x="140" y="320" text-anchor="middle" fill="#d6362b" font-weight="bold">+</text>
   <text x="80" y="412" text-anchor="middle" fill="#1c2430" font-weight="bold">−</text>
 

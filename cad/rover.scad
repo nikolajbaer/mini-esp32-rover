@@ -1,7 +1,7 @@
 // Mini ESP32 tracked rover - parametric model.
 //
 // Pick what to render with `part`:
-//   assembly | chassis | deck | sprocket | idler | pin | track | plate | hubtest
+//   assembly | chassis | deck | cover | sprocket | idler | pin | track | plate | hubtest
 // e.g.  openscad -D 'part="chassis"' -o chassis.stl rover.scad
 //
 // Axes in the assembly: +x forward, +y left, +z up, ground at z = 0.
@@ -39,7 +39,8 @@ shaft_flat = 2.5;
 // Length of the pinion / shaft beyond the gearbox face
 shaft_len = 3.5;      // 3 mm of teeth plus a 0.5 mm tip
 // Battery (602030), XIAO and DRV8833 board footprints
-batt = [33, 20, 6.25]; // length includes the protection board and wire tab
+batt = [45, 25, 10];   // 850 mAh cell
+plug_bay = 9;         // room behind the battery for its plug and the mating half
 xiao = [21, 17.8];    // length (USB end to antenna end), width
 drv = [18.6, 16];
 drv_h = 3.2;          // driver board thickness including its parts
@@ -55,7 +56,7 @@ tread_h = 2.0;        // outer grip bars; taller = more ground clearance
 track_slack = 1.0;    // extra belt length over the exact fit (negative = tighter)
 
 /* [Body] */
-inner_w = 24.6;       // inside width of the tub
+inner_w = 25.6;       // inside width of the tub
 wall = 2;
 end_wall = 1.6;
 floor_t = 1.6;
@@ -97,7 +98,19 @@ far_y = inner_w / 2 - xiao.x;                  // antenna end of the XIAO
 // The pilot holes sit partly in the wall so the posts stay slim.
 post_x = xiao.y / 2 + 0.2 + 1.6;
 post_x2 = 4;
-post_y = inner_w / 2 - 0.3;
+post_y = inner_w / 2 - 1.2;
+
+// Deck and battery cover. The deck overhangs the tub front and rear, between
+// the tracks, to carry the battery and a compartment for its plug.
+corner_r = 3;                                  // plan radius of the body corners
+cover_wall = 1.2;
+rib_h = 1.5;                                   // battery sits on ribs, clear of the screw heads
+tab_t = 1.0;                                   // snap tabs that hold the cover
+dx = (batt.x + 0.4 + 0.8 + plug_bay) / 2 + tab_t + 0.15 + cover_wall;  // deck half length
+cover_h = rib_h + batt.z + 0.3 + cover_wall;
+tab_x = dx - cover_wall - 0.15;                // outer face of a snap tab
+batt_x0 = -tab_x + tab_t + plug_bay + 0.8;     // rear end of the battery slot
+latch_z = 5.5;                                 // underside of the snap ridge, above the deck
 
 flange = 1.2;                                  // 45 degree belt guide flanges
 wheel_gap = 0.6;                               // wall to wheel
@@ -109,7 +122,7 @@ pin_len = wall + boss_len + wheel_gap + wheel_w + 0.3;
 assert(motor_bot >= floor_top, "motor sits below the floor: more teeth or less clearance");
 assert(2 * bay_x >= max(xiao.y, drv.x) + 1, "electronics bay too short: raise belt_teeth");
 assert(inner_w >= xiao.x + 3.3, "XIAO does not fit across the tub: raise inner_w");
-assert(2 * bx >= batt.x + 3, "battery overhangs the deck");
+assert(by - cover_wall >= batt.y / 2 + 0.2, "battery wider than the cover: raise inner_w");
 assert(inner_w >= gbox_len + motor_len + motor_tail + 3 + 1.9, "motor does not fit across the tub: raise inner_w");
 
 // ---------------------------------------------------------------- chassis --
@@ -148,14 +161,19 @@ module motor_pocket_cut(side) {
     cylinder(d = pin_hole_d, h = wall + boss_len + 2 * eps);
 }
 
+// Rectangle of half size hx, hy with rounded corners, centred on the origin.
+module rounded_rect(hx, hy, r) {
+  offset(r) square([2 * (hx - r), 2 * (hy - r)], center = true);
+}
+
 // Supports for the XIAO, and the deck screw posts, all rising from the floor.
 module bay_add() {
   z0 = floor_top - eps;
   // USB end: a shelf under each corner of the board, and a post beside it
   for (sx = [-1, 1]) {
     translate([sx > 0 ? 6.6 : -bay_x, inner_w / 2 - 2.5, z0]) cube([bay_x - 6.6, 2.5 + eps, pcb_z - z0]);
-    translate([sx > 0 ? xiao.y / 2 + 0.2 : -bay_x - rib_t, inner_w / 2 - 2, z0])
-      cube([bay_x + rib_t - xiao.y / 2 - 0.2, 2 + eps, wall_top - z0]);
+    translate([sx > 0 ? xiao.y / 2 + 0.2 : -bay_x - rib_t, inner_w / 2 - 2.8, z0])
+      cube([bay_x + rib_t - xiao.y / 2 - 0.2, 2.8 + eps, wall_top - z0]);
   }
   // antenna end: a shelf under the board and a full-height stop behind it
   translate([-6.3, -inner_w / 2 - eps, z0]) cube([12.6, far_y + 1.2 + inner_w / 2, pcb_z - z0]);
@@ -166,7 +184,11 @@ module chassis() {
   difference() {
     union() {
       difference() {
-        translate([-bx, -by, ground_clearance]) cube([2 * bx, 2 * by, wall_top - ground_clearance]);
+        // outer shell: rounded corners, chamfered bottom edge
+        hull() {
+          translate([0, 0, ground_clearance]) linear_extrude(eps) rounded_rect(bx - 1.2, by - 1.2, corner_r);
+          translate([0, 0, ground_clearance + 1.2]) linear_extrude(wall_top - ground_clearance - 1.2) rounded_rect(bx, by, corner_r);
+        }
         translate([-bx + end_wall, -inner_w / 2, floor_top]) cube([2 * (bx - end_wall), inner_w, wall_top]);
       }
       // ribs closing the motor pockets (wires pass over the top)
@@ -188,30 +210,50 @@ module chassis() {
 }
 
 // ------------------------------------------------------------------- deck --
-// Clamps the motors, closes the bay and carries the battery between low rails.
-// Flat underneath, so it prints without supports.
+// Clamps the motors, closes the bay and carries the battery. Flat underneath,
+// so it prints without supports. From the rear: snap tab, plug compartment
+// with the lead hole, battery on three ribs, snap tab.
+module snap_tab(dir) {  // dir = +1 front, -1 rear; ridge faces outward
+  w = 16;
+  translate([dir > 0 ? tab_x - tab_t : -tab_x, -w / 2, 0]) cube([tab_t, w, 8]);
+  // ridge: flat underside to catch the cover, sloped top to let it click on
+  translate([dir * tab_x, 0, latch_z]) rotate([90, 0, 0])
+    linear_extrude(w, center = true) polygon([[0, 0], [dir * 0.6, 0], [0, 1.4]]);
+}
+
 module deck() {
-  rail_h = 3; rail_t = 1.2;
-  ex = batt.x / 2 + 0.2;            // battery end
-  ey = batt.y / 2 + 0.2;            // battery side
   difference() {
     union() {
-      translate([-bx, -by, 0]) cube([2 * bx, 2 * by, deck_t]);
+      linear_extrude(deck_t) rounded_rect(dx, by, corner_r);
       translate([0, 0, deck_t - eps]) {
-        // rear end stop, and a front one that leaves the right side open for the leads
-        translate([-ex - rail_t, -ey - rail_t, 0]) cube([rail_t, 2 * (ey + rail_t), rail_h]);
-        translate([ex, -2, 0]) cube([rail_t, ey + rail_t + 2, rail_h]);
-        // short side rails at the corners, clear of the screw heads
-        for (sx = [-1, 1]) translate([sx > 0 ? ex - 4 : -ex - rail_t, ey, 0]) cube([4 + rail_t, rail_t, rail_h]);
-        translate([-ex - rail_t, -ey - rail_t, 0]) cube([4 + rail_t, rail_t, rail_h]);
+        for (y = [-8, 0, 8]) translate([batt_x0, y - 1, 0]) cube([batt.x + 0.4, 2, rib_h]);
+        // low stop between the battery and the plug compartment; corners left open for the leads
+        translate([batt_x0 - 0.8, -6, 0]) cube([0.8, 12, 4]);
+        snap_tab(1);
+        snap_tab(-1);
       }
     }
-    // slot for the battery leads, down into the corner of the bay behind the XIAO
-    hull() for (x = [7.8, 9.8]) translate([x, -inner_w / 2 + 1.4, -eps]) cylinder(d = 2.6, h = deck_t + 2 * eps);
+    // hole for the two leads, down beside the rear motor's tail
+    hull() for (y = [inner_w / 2 - 5.6, inner_w / 2 - 4.2])
+      translate([-ax - body_d / 2 + 1.4, y, -eps]) cylinder(d = 2.6, h = deck_t + 2 * eps);
     for (sx = [-1, 1]) {
       translate([sx * post_x, post_y, -eps]) cylinder(d = screw_clear_d, h = deck_t + 2 * eps);
       translate([sx * post_x2, -post_y, -eps]) cylinder(d = screw_clear_d, h = deck_t + 2 * eps);
     }
+  }
+}
+
+// Battery cover, modelled sitting on the deck (z = 0 at the deck top). Clicks
+// over the two snap tabs; press a ridge in through its window to release.
+module cover() {
+  c = 2;  // top edge chamfer
+  difference() {
+    hull() {
+      linear_extrude(cover_h - c) rounded_rect(dx, by, corner_r);
+      translate([0, 0, cover_h - eps]) linear_extrude(eps) rounded_rect(dx - c, by - c, corner_r);
+    }
+    translate([0, 0, -eps]) linear_extrude(cover_h - cover_wall) rounded_rect(dx - cover_wall, by - cover_wall, corner_r - cover_wall);
+    for (s = [-1, 1]) translate([s > 0 ? dx - cover_wall - 1 : -dx - 1, -8.3, latch_z - 0.2]) cube([cover_wall + 2, 16.6, 2]);
   }
 }
 
@@ -382,12 +424,22 @@ module electronics_mock() {
   color("gainsboro") translate([-4.5, inner_w / 2 - 6, pcb_z + 1.2]) cube([9, 7.3, 3.2]);
 }
 
+module battery_mock() {
+  color("silver") translate([batt_x0 + 0.2, -batt.y / 2, rib_h]) cube(batt);
+  // plug pair lying across the compartment
+  color("red") translate([-tab_x + tab_t + 0.4, -12.5, 0.3]) cube([8.2, 25, 6.4]);
+}
+
+show_cover = true;
 module assembly() {
   color("steelblue") chassis();
-  color("lightsteelblue", 0.9) translate([0, 0, wall_top]) deck();
+  color("lightsteelblue") translate([0, 0, wall_top]) deck();
   side_parts(1);
   side_parts(-1);
-  color("gold") translate([-batt.x / 2, -batt.y / 2, wall_top + deck_t]) cube(batt);
+  translate([0, 0, wall_top + deck_t]) {
+    battery_mock();
+    if (show_cover) color("slategray", 0.55) cover();
+  }
   electronics_mock();
 }
 
@@ -395,6 +447,7 @@ module assembly() {
 module plate() {
   translate([0, 0, -ground_clearance]) chassis();
   translate([0, 2 * by + 6, 0]) deck();
+  translate([0, -2 * by - 6, cover_h]) rotate([180, 0, 0]) cover();
   for (i = [0, 1]) {
     translate([-bx - 14, i * 24, 0]) sprocket();
     translate([-bx - 38, i * 24, 0]) idler();
@@ -405,6 +458,7 @@ module plate() {
 if (part == "assembly") assembly();
 else if (part == "chassis") translate([0, 0, -ground_clearance]) chassis();
 else if (part == "deck") deck();
+else if (part == "cover") translate([0, 0, cover_h]) rotate([180, 0, 0]) cover();  // top face on the bed
 else if (part == "sprocket") sprocket();
 else if (part == "idler") idler();
 else if (part == "pin") pin();
@@ -413,4 +467,4 @@ else if (part == "plate") plate();
 else if (part == "hubtest") hubtest();
 
 echo(str("wheelbase=", wheelbase, " axle_z=", axle_z, " size LxWxH=", 2 * (ax + track_r), " x ",
-         2 * (by + wheel_gap + wheel_w), " x ", max(2 * track_r, wall_top + deck_t + 4)));
+         2 * (by + wheel_gap + wheel_w), " x ", max(2 * track_r, wall_top + deck_t + cover_h)));
