@@ -101,7 +101,9 @@ post_y = inner_w / 2 - 1.2;
 
 // Deck. The battery sits on ribs, clear of the screw heads, and is pushed
 // forward so the lead hole behind it stays open; its plug connects above.
-corner_r = 3;                                  // plan radius of the body corners
+end_r = 5;                                     // rounding of the tub's lower front and rear edges
+side_r = 3;                                    // rounding of the tub's lower side edges
+deck_r = 1;                                    // rounding of the deck's top edge
 rail_t = 1.2;
 rib_h = 1.5;
 lead_x = -ax - body_d / 2 + 1.4;               // lead hole, beside the rear motor's tail
@@ -157,9 +159,14 @@ module motor_pocket_cut(side) {
     cylinder(d = pin_hole_d, h = wall + boss_len + 2 * eps);
 }
 
-// Rectangle of half size hx, hy with rounded corners, centred on the origin.
-module rounded_rect(hx, hy, r) {
-  offset(r) square([2 * (hx - r), 2 * (hy - r)], center = true);
+// Cross-section of the tub: half width h, from zlo up to zhi, with the two
+// lower corners rounded at radius r. The arc stops where it reaches 45 degrees,
+// so the rounded edge still prints cleanly straight off the bed.
+module hull_profile(h, zlo, zhi, r) {
+  cz = zlo + r * sin(45);
+  arc = [for (a = [-45 : 5 : 0]) [h - r + r * cos(a), cz + r * sin(a)]];
+  pts = concat(arc, [[h, zhi], [-h, zhi]], [for (i = [len(arc) - 1 : -1 : 0]) [-arc[i].x, arc[i].y]]);
+  polygon(pts);
 }
 
 // Supports for the XIAO, and the deck screw posts, all rising from the floor.
@@ -180,10 +187,10 @@ module chassis() {
   difference() {
     union() {
       difference() {
-        // outer shell: rounded corners, chamfered bottom edge
-        hull() {
-          translate([0, 0, ground_clearance]) linear_extrude(eps) rounded_rect(bx - 1.2, by - 1.2, corner_r);
-          translate([0, 0, ground_clearance + 1.2]) linear_extrude(wall_top - ground_clearance - 1.2) rounded_rect(bx, by, corner_r);
+        // outer shell: square in plan, with the lower edges rounded all round
+        intersection() {
+          rotate([90, 0, 0]) linear_extrude(2 * by, center = true) hull_profile(bx, ground_clearance, wall_top, end_r);
+          rotate([90, 0, 90]) linear_extrude(2 * bx, center = true) hull_profile(by, ground_clearance, wall_top, side_r);
         }
         translate([-bx + end_wall, -inner_w / 2, floor_top]) cube([2 * (bx - end_wall), inner_w, wall_top]);
       }
@@ -213,7 +220,11 @@ module deck() {
   bx1 = batt_x0 + batt.x + 0.4;      // front end of the battery slot
   difference() {
     union() {
-      translate([(deck_x1 - bx) / 2, 0, 0]) linear_extrude(deck_t) rounded_rect((deck_x1 + bx) / 2, by, corner_r);
+      // plate, square in plan, top edge rounded
+      hull() for (a = [0 : 15 : 90]) {
+        d = deck_r * (1 - cos(a));
+        translate([-bx + d, -by + d, 0]) cube([deck_x1 + bx - 2 * d, 2 * (by - d), deck_t - deck_r + deck_r * sin(a)]);
+      }
       translate([0, 0, deck_t - eps]) {
         for (y = [-8, 0, 8]) translate([batt_x0, y - 1, 0]) cube([batt.x + 0.4, 2, rib_h]);
         // rear stop, low and short so the leads pass either side
