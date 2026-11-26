@@ -142,7 +142,7 @@ module socket_add(j) {
         translate(j[0]) sphere(j[2] + fit + cup_wall);
         rod(j[0], -j[1], j[2] + fit + cup_wall + 1, j[2] + fit + cup_wall + 1);
     }
-    rod(j[0], j[1], j[2] + fit + cup_wall, j[2] + 10);
+    rod(j[0], j[1], j[2] + fit + cup_wall - 0.05, j[2] + 10);  // a hair thinner: no tangent faces
 }
 module socket_cut(j) {
     translate(j[0]) sphere(j[2] + fit);
@@ -444,11 +444,20 @@ module hair_cap(locks_below = true) {
     translate(head_c) difference() {
         union() {
             intersection() { shell(-hair_t, wall); hair_side(); }
-            // lip under the seam, inside the face's wall
+            // lip under the seam, inside the face's wall, joined to the cap
+            // by a ring just above the seam
             difference() {
-                intersection() {
-                    shell(wall + fit, wall + fit + 1.2);
-                    hair_side(-lip_h);
+                union() {
+                    intersection() {
+                        shell(wall + fit, wall + fit + 1.2);
+                        hair_side(-lip_h);
+                        face_side(2);
+                    }
+                    intersection() {
+                        shell(wall - 0.01, wall + fit + 1.2);
+                        hair_side();
+                        face_side(2);
+                    }
                 }
                 for (b = boss_at) rod(b - seam_n * 20, seam_n, boss_d / 2 + fit, 40);
             }
@@ -524,7 +533,7 @@ module hair_piece(style) {
 // ----------------------------------------------------------------------------
 // S-hook to bend from wire is better; this printable one is for testing.
 module s_hook() {
-    for (s = [-1, 1]) translate([0, s * 2.2, 0]) rotate([0, 0, s > 0 ? 0 : 180])
+    for (s = [-1, 1]) translate([0, s * 2.0, 0]) rotate([0, 0, s > 0 ? 0 : 180])
         rotate_extrude(angle = 220, $fn = 32) translate([2.2, 0]) circle(0.6, $fn = 12);
 }
 
