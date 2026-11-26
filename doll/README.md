@@ -1,114 +1,130 @@
-# Chibi doll head
+# Anime ball-jointed doll
 
-A parametric, 3D-printable chibi doll head. It comes apart into the same pieces
-as the small vinyl doll head we measured, and it is meant to fit the same
-kind of body. Everything is in one file,
-[`head.scad`](head.scad). You change the face and hair by editing the numbers
-at the top (or with OpenSCAD's Customizer panel).
+A 3D-printable ball-jointed doll, about 9" (226 mm with hair) tall, with an
+oversized anime head and interchangeable hair. It is held together inside by
+elastic cord and wire S-hooks, like a resin BJD. Everything comes from one
+parametric file, [`doll.scad`](doll.scad).
 
-![Front, three-quarter, side and back](render.png)
+![Front and side](render.png)
 
-> **Status:** this is a first draft and has not been printed. The sizes come from photos
-> of the original parts on 5 mm graph paper, so they are only accurate to about
-> ±1 mm. Before printing everything, measure the items in
-> [Measure first](#measure-first) and print `holder.stl` on its own to check the fit on the
-> neck.
+> **Status:** first draft. Nothing has been printed or strung yet. Expect to
+> tune the joint fits (`fit`) and the cup depths after the first test prints.
 
 ## Parts
 
-| Part | Like the original | What it does |
+| Part | Qty | Joints it carries |
 | --- | --- | --- |
-| `face` | skin-coloured face plate | Face, cheeks, chin and ears. It is open at the back, has eye holes and a flat seat behind them, and a thin tongue at the back edge |
-| `eyes` | two eyes joined by a clear bridge | Eye discs. A flange sits on the seat, and a plug fills the hole |
-| `iris`, `pupil` | (printed on) | Separate bodies, for multi-colour printing or to use as paint masks |
-| `holder` | T-shaped piece with a socket | A plate that presses the eyes against the seat. Behind it, a box with a ball cup and a slot underneath, for the body's neck |
-| `hair_front` | bangs piece | A cap with bangs and side locks. It sits over the top of the face |
-| `hair_back` | back hair piece | The back of the head with flicks at the nape. The face's tongue slides into it |
-| pins | — | 3 pieces of 1.75 mm filament, 7 mm long, that join `hair_front` to `hair_back` |
+| `head` | 1 | neck cup, head hook bar, 2 magnets |
+| `hair_bob`, `hair_twintails` | 1 of each style | 2 magnets; the hair is the back and top of the head |
+| `chest` | 1 | neck ball, waist ball, both shoulder cups |
+| `pelvis` | 1 | waist cup, both hip cups |
+| `upper_arm_r` / `_l` | 1 + 1 | shoulder ball, elbow ball |
+| `forearm_r` / `_l` | 1 + 1 | elbow cup, wrist cup |
+| `hand_r` / `_l` | 1 + 1 | wrist ball, hook bar |
+| `thigh_r` / `_l` | 1 + 1 | hip ball, knee ball |
+| `shin_r` / `_l` | 1 + 1 | knee cup, ankle cup |
+| `foot_r` / `_l` | 1 + 1 | ankle ball, hook bar |
 
-Assembly order: eyes into the face from behind → holder plate onto the eyes →
-slide the face's tongue into `hair_back` (the holder's box ends against its
-inner wall, which keeps everything clamped) → press `hair_front` on with the
-three pins. Glue is optional. Without it you can swap faces and hair.
+Every joint is a ball on one part sitting in a cup on the next. The elastic
+pulls each ball into its cup, so the cups are no deeper than a hemisphere and
+nothing has to snap together. The elbows and knees bend one way only (the
+elbows about 120°, the knees about 115°). The other joints swivel in a cone.
 
-## Making it your own
+### Hardware
 
-All of the parameters are at the top of `head.scad`, in these groups:
+- 2 mm round elastic cord, about 1 m
+- 5 wire S-hooks, about 10 mm long, bent from 0.8 mm steel or brass wire
+  (`s_hook.stl` is a printable stand-in for testing only)
+- 4 disc magnets, 5 × 2 mm, plus 2 more for each extra hairstyle
+- A stringing tool: a loop of stiff wire, or a long crochet hook
 
-- **Head shape:** the cranium ellipsoid, plus two cheek spheres and a chin
-  sphere hulled together. To get a rounder, younger face, make the cheeks
-  bigger and lower. To get a pointier, older face, move `chin_y` forward and
-  shrink the cheeks.
-- **Eyes:** `eye_x` sets the spacing, `eye_z` the height, `eye_w`/`eye_h`
-  the size, and `eye_tilt` and `eye_round` the shape (below 1 flattens the
-  top into a lid line). `eye_mode = "painted"` gives a face with no eye holes,
-  just a shallow engraved outline to paint.
-- **Face details:** the mouth arc (`mouth_smile` below 0 makes a frown) and a
-  tiny nose bump.
-- **Hair:** every lock is a tapering ribbon laid on the head, placed by its
-  azimuth (0 = centre of the face, 90 = the doll's left ear) and by its root
-  and tip heights. Bangs: `bangs`, `bang_spread`, `bang_tip_z` (a list of tip
-  heights, one per lock), `bang_w`, `bang_curl`, `bang_sway`. Side locks:
-  `lock_*`. Nape flicks: `back_flips`, `flip_*`. For a completely new style,
-  add `lock(...)` calls to `bang_strands()`, `side_lock_strands()` or
-  `back_flip_strands()`.
+## Stringing
 
-Render a quick check with `part="assembly"`, `"exploded"` or `"section"` (the
-section is cut down the middle).
+There are three runs of elastic:
 
-## Measure first
+1. **Legs:** tie one end to an S-hook and hook it onto the bar in the right
+   foot (inside the ankle ball). Feed the cord up through the shin, thigh and
+   right hip into the pelvis, across, and down through the left hip, thigh and
+   shin. Then tie it to an S-hook on the left foot's bar. Tension it so the
+   feet pull firmly into the ankles.
+2. **Torso:** hook an S-hook onto the bar inside the head (take the hair off to
+   reach it). Run the cord down through the neck ball, the chest and the
+   waist ball into the pelvis. There, hook it round the leg cord with a second
+   S-hook.
+3. **Arms:** start at the right hand's hook bar. Run the cord through the
+   forearm, upper arm and right shoulder into the chest, across, and out
+   through the left arm to the left hand.
 
-These are the sizes that decide whether it fits. Each one is marked `MEASURE`
-in the file:
+Tighter cord holds poses better but makes the doll harder to move. Tie, test
+and re-tie.
 
-| Parameter | Estimate | How to measure it |
-| --- | --- | --- |
-| `ball_d` | 5.0 | diameter of the ball (or flared tip) on the body's neck peg |
-| `slot_w` | 3.3 | diameter of the neck shaft just under the ball |
-| `socket_z`, `socket_y` | -4.4, -1.5 | where the ball sits in the original head. Use calipers from the chin and from the face front |
-| `cran_w` | 23 | width of the original face plate at the temples |
-| `eye_x` | 5.6 | half the centre-to-centre spacing of the original eye holes (~11 mm) |
+## Interchangeable hair
 
-If you want to use the original eye insert or T-piece in a printed face,
-measure those too and set `eye_w`/`eye_h`/`eye_lip`/`eye_t` to match.
+The head is cut on a flat, slanted seam that runs from the hairline at the
+front to the nape at the back. Everything above the seam belongs to the
+hairstyle: the back of the skull, the bangs and the locks.
+
+- Two magnets in the head and two in each hair piece hold it on.
+- A thin lip on the hair, inside the head's rim, stops it sliding.
+- Taking the hair off also opens the head, so you can reach the head hook.
+
+Make sure the magnet polarities match before gluing them in.
+
+To make a new style, write a module that calls `hair_cap() { ... }` and put
+`lock(...)` and `ribbon(...)` calls inside it. `hair_cap` already supplies the
+skull, the lip, the magnets and the trimming, so the new style fits every
+head printed from this file. `hair_bob()` and `hair_twintails()` are examples.
+
+- `lock(az, root_z, tip_z, width, ...)` lays a tapering lock on the head.
+  `az` is the angle around the head (0 is the face, 90 is the doll's right).
+- `ribbon(points, ...)` is a free-hanging strand, such as a tail.
+
+## Tuning
+
+The parameters are at the top of `doll.scad`:
+
+- **Fits and stringing:**
+  - `fit`: ball-to-cup clearance. 0.25 mm suits resin, use 0.3–0.4 for FDM.
+  - `cord_d`: size of the elastic holes.
+  - `wall`: shell thickness.
+- **Head:** cranium, cheek and chin sizes. Bigger, lower cheeks give a rounder,
+  younger face.
+- **Face:** eye position, size and tilt, the iris, the mouth and the nose.
+  - `eye_style = "engraved"` cuts shallow guide lines for painting.
+  - `"smooth"` leaves a blank face for decals or face-up.
+- **Joints:** each one is a single line, `neck_j`, `shoulder_j(s)`, and so
+  on. A line gives the centre, ball radius, stem radius and how far the joint
+  swings.
+
+The body parts are hulls of ellipsoids (`chest_shape`, `thigh_shape(s)`,
+and so on), so you reshape the body by editing those lists.
 
 ## Printing
 
-These are tiny parts with fine detail (the walls are 1.2 mm thick, the locks
-taper to points), so they print best on a **resin (MSLA) printer**. The STLs
-in [`stl/`](stl) are already turned to the best side for that:
+The parts are small and smooth and have ball joints, so they print best on a
+**resin (MSLA) printer**. Hollow parts need drain holes; the joint openings
+usually serve. On FDM, use a 0.25 mm nozzle, 0.08–0.12 mm layers, supports
+under the balls and cups, and `fit = 0.35`.
 
-| File | Qty | Material | Notes |
-| --- | --- | --- | --- |
-| `face.stl` | 1 | skin-tone resin | face down. Put supports on the inside only; the outside then needs no sanding |
-| `eyes.stl` | 1 | white | flange down |
-| `iris.stl`, `pupil.stl` | 1 | colour | optional: only for multi-colour printing |
-| `holder.stl` | 1 | any | print this first to test the neck fit |
-| `hair_front.stl` | 1 | hair colour | supports inside; the bang tips need light supports |
-| `hair_back.stl` | 1 | hair colour | supports inside |
-
-FDM can work with a 0.2–0.25 mm nozzle and 0.08 mm layers. If you print FDM,
-set `fit = 0.25`, and consider `hair_t = 3.5`.
+The STLs in [`stl/`](stl) are in their standing position. Turn them in the
+slicer to suit your printer.
 
 To regenerate the STLs:
 
 ```sh
 cd doll
-for p in face eyes iris pupil holder hair_front hair_back; do
-  openscad -D "part=\"$p\"" -o stl/$p.stl head.scad
+for p in head hair_bob hair_twintails chest pelvis \
+         upper_arm_r upper_arm_l forearm_r forearm_l hand_r hand_l \
+         thigh_r thigh_l shin_r shin_l foot_r foot_l s_hook; do
+  openscad -D "part=\"$p\"" -o stl/$p.stl doll.scad
 done
 ```
 
-A full render of each hair part takes a few minutes in OpenSCAD 2021. A recent
-development build with the Manifold backend is much faster.
+## Known gaps in this draft
 
-## Compatibility notes
-
-- The neck socket uses the same idea as the original T-piece: a ball cup in a
-  box, entered through a fore-aft slot from below so the head can nod. A
-  printed head should go on the original body once `ball_d`, `slot_w` and the
-  socket position match.
-- The printed hair and face fit **each other**. They do not snap onto the original
-  vinyl face or hair, because their clip rims are too complex to copy from
-  photos. If you want to mix them, we can model the original rim once we have
-  caliper measurements (or a 3D scan) of it.
+- Single joints only. Double-jointed elbows and knees would let them fold
+  further.
+- Mitten hands, with no separate fingers.
+- No stand. A 9" BJD with a big head is top-heavy, so plan on a doll stand
+  with a waist clip.
+- The face is engraved, not sculpted. The eyes are guides for paint or decals.
