@@ -535,6 +535,8 @@ module hair_piece(style) {
 module s_hook() {
     for (s = [-1, 1]) translate([0, s * 2.0, 0]) rotate([0, 0, s > 0 ? 0 : 180])
         rotate_extrude(angle = 220, $fn = 32) translate([2.2, 0]) circle(0.6, $fn = 12);
+    // spine joining the two curls
+    let(e = [2.2 * cos(220), 2.0 + 2.2 * sin(220), 0]) rod2(e, -e, 0.6);
 }
 
 // ----------------------------------------------------------------------------
