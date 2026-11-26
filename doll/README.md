@@ -5,7 +5,7 @@ oversized anime head and interchangeable hair. It is held together inside by
 elastic cord and wire S-hooks, like a resin BJD. Everything comes from one
 parametric file, [`doll.scad`](doll.scad).
 
-![Front and side](render.png)
+![Front (bob), side (twin tails) and back](render.png)
 
 > **Status:** first draft. Nothing has been printed or strung yet. Expect to
 > tune the joint fits (`fit`) and the cup depths after the first test prints.
